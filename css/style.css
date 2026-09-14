@@ -318,3 +318,16 @@ input.carry-in:focus { border-color: var(--bad); }
 .wp-en { font-size: 22px; font-weight: 700; line-height: 1.5; color: var(--ink); }
 .wp-zh { font-size: 17px; color: var(--muted); margin-top: 6px; line-height: 1.5; }
 .small-speak { font-size: 14px; background: #efeafd; border-radius: 8px; padding: 2px 8px; margin-right: 6px; color: var(--primary-dark); font-weight: 700; }
+
+/* ---- 图片组（乘除法） ---- */
+.pic-groups { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin: 6px 0; }
+.pic-group { position: relative; display: grid; grid-template-columns: repeat(var(--per, 5), auto); gap: 2px 4px; padding: 8px 10px; border: 2px solid #d9d2f7; border-radius: 14px; background: #fbfaff; transition: background .25s, border-color .25s; }
+.pic-group.circle { border-radius: 30px; border-color: #c8c0f0; }
+.pic-group.on { background: #fff3d6; border-color: var(--accent); }
+.pic-group .pic-label { position: absolute; top: -10px; right: -6px; background: var(--accent); color: #fff; font-size: 13px; font-weight: 800; border-radius: 10px; padding: 0 7px; }
+.pic-item { font-size: 26px; line-height: 1.15; transition: transform .2s; }
+.pic-item.on { transform: scale(1.15); filter: drop-shadow(0 0 4px rgba(255,159,67,.9)); }
+.pic-loose { display: flex; flex-wrap: wrap; gap: 4px 8px; justify-content: center; max-width: 560px; margin: 6px auto; }
+.pic-array { display: inline-grid; gap: 4px 8px; margin: 6px auto; padding: 10px 14px; border: 2px solid #d9d2f7; border-radius: 14px; }
+.pic-array .pic-item.on { background: #fff3d6; border-radius: 6px; }
+.qstage .pic-groups, .qstage .pic-array { max-width: 100%; }

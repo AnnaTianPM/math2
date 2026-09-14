@@ -185,9 +185,14 @@ window.StepKinds = window.StepKinds || {};
       return JSON.stringify(v);
     }
     const norm = (k, s) => q.fields[k].kind === 'text' ? String(s).toLowerCase().replace(/\s+/g, ' ').trim() : String(s).trim();
-    const ok = (k, s) => norm(k, s) === norm(k, q.fields[k].a);
+    // q.accept：多组可接受的答案 [{k:v,...}, ...]；判分时取匹配最多的一组
+    const alts = q.accept ? q.accept : null;
+    let target = null;
+    const pickTarget = v => { if (!alts) return; let best = null, bn = -1; for (const alt of alts) { const n = keys.filter(k => v && v[k] !== undefined && norm(k, v[k]) === norm(k, alt[k])).length; if (n > bn) { bn = n; best = alt; } } target = best; };
+    const expect = k => (alts && target ? target[k] : q.fields[k].a);
+    const ok = (k, s) => norm(k, s) === norm(k, expect(k));
     function markWrong(box, val) {
-      const v = JSON.parse(val);
+      const v = JSON.parse(val); pickTarget(v);
       keys.forEach(k => {
         const good = ok(k, v[k]);
         const inp = box.querySelector(`input.blank[data-key="${k}"]`);
@@ -209,6 +214,7 @@ window.StepKinds = window.StepKinds || {};
     function lock(box) { box.querySelectorAll('input.blank').forEach(i => i.disabled = true); box.querySelectorAll('.segbtn, .small-choices .choice').forEach(b => b.disabled = true); const s = box.querySelector('#submit'); if (s) s.disabled = true; }
     function restore(box, val, status) {
       let v = {}; try { v = JSON.parse(val || '{}'); } catch (e) { /* ignore */ }
+      pickTarget(v);
       keys.forEach(k => {
         const inp = box.querySelector(`input.blank[data-key="${k}"]`);
         if (inp) { inp.value = v[k] !== undefined ? v[k] : ''; inp.classList.add(ok(k, v[k]) ? 'good' : 'badf'); }
@@ -219,14 +225,14 @@ window.StepKinds = window.StepKinds || {};
       lock(box);
     }
     const answerText = q.answerText || keys.map(k => q.fields[k].a).join(', ');
-    const stage = q.blocks ? `<div class="blocks">${Blocks.render(q.blocks, { scale: 1.4 })}</div>` : q.bigNum !== undefined ? U().bigNum(q.bigNum) : '';
+    const stage = q.pic ? q.pic : q.blocks ? `<div class="blocks">${Blocks.render(q.blocks, { scale: 1.4 })}</div>` : q.bigNum !== undefined ? U().bigNum(q.bigNum) : '';
     return {
       prompt: q.prompt || { zh: '填一填', en: 'Fill in the blanks' },
       stage,
       custom: { html, bind, value, markWrong, showAnswer, lock, restore },
       hint: q.hint || { zh: '想一想百位、十位、个位各是几。', en: 'Think about the hundreds, tens and ones.' },
       answerText,
-      check: val => { try { const v = JSON.parse(val); return keys.every(k => ok(k, v[k])); } catch (e) { return false; } },
+      check: val => { try { const v = JSON.parse(val); pickTarget(v); return keys.every(k => ok(k, v[k])); } catch (e) { return false; } },
       answerDisplay: val => { try { const v = JSON.parse(val); return keys.map(k => v[k]).join(', '); } catch (e) { return val; } },
       explainKind: q.explain ? q.explain[0] : null, n: q.explain ? q.explain[1] : null,
     };
