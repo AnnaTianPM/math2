@@ -529,6 +529,7 @@
       $('#redoBtn', box).onclick = () => redoCurrent(q);
       if (status === 'bad') $('#explainBtn', box).onclick = () => showExplain(qv.explainKind, qv.n);
       $('#nextBtn', box).onclick = next;
+      scrollToActions();
       listen(e => { if (e.key === 'Enter' && state.phase === 'next' && !$('.overlay')) { e.preventDefault(); next(); } });
     }
 
@@ -537,7 +538,9 @@
       delete state.results[q.id]; delete state.answers[q.id];
       if (book) { Store.clearProgress(q.id); updateWrongBadge(); }
       render();
+      const fb = $('#fb', box); if (fb) fb.innerHTML = '🔄 记录已清掉，重新做一次吧 <span class="en">Cleared, try again</span>';
       const inp = $('#ans', box); if (inp) inp.focus({ preventScroll: true });
+      box.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
     function markChoice(val, cls) { box.querySelectorAll('.choice').forEach(b => { if (b.dataset.val === val) { b.classList.add(cls); b.disabled = true; } }); }
@@ -595,12 +598,20 @@
       const inp = $('#ans', box); if (inp) { inp.disabled = true; inp.blur(); $('#submit', box).disabled = true; }
       // 题号颜色刷新
       const nav = $('.qnav', box); if (nav) { nav.outerHTML = navHTML(); bindNav(); }
-      $('#actions', box).innerHTML = `${correct ? '' : '<button class="btn accent" id="explainBtn">看讲解 📖</button>'}
+      $('#actions', box).innerHTML = `<button class="btn secondary" id="redoBtn" title="清掉这道题的记录，重新作答">重做这题 🔄</button>
+        ${correct ? '' : '<button class="btn accent" id="explainBtn">看讲解 📖</button>'}
         <button class="btn" id="nextBtn">${isLast() ? '看结果 🏁' : '下一题 ▶'} <span style="font-size:13px;opacity:.8">(Enter)</span></button>`;
       $('#nextBtn', box).onclick = next;
+      $('#redoBtn', box).onclick = () => redoCurrent(q);
       if (!correct) $('#explainBtn', box).onclick = () => showExplain(qv.explainKind, qv.n);
+      scrollToActions();
       // 延迟一拍再监听，避免刚才提交用的那个回车事件冒泡上来又触发“下一题”
       setTimeout(() => { if (state.phase === 'next') listen(e => { if (e.key === 'Enter' && state.phase === 'next' && !$('.overlay')) { e.preventDefault(); next(); } }); }, 50);
+    }
+    // 答完后把反馈和按钮滚到看得见的地方
+    function scrollToActions() {
+      const el = $('#actions', box);
+      if (el) setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 30);
     }
     function bindNav() {
       if (cfg.mode === 'gen') return;
