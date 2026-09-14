@@ -271,3 +271,44 @@ input.blank:disabled { opacity: .9; }
 .slot.filled { border-style: solid; border-color: var(--primary); background: #fff; }
 .slot.right { border-color: var(--ok); background: #eafaf1; }
 .slot.wrong { border-color: var(--bad); background: #fff0f0; }
+
+/* ---- 横式 ---- */
+.eq-big { font-size: 46px; font-weight: 800; color: var(--primary-dark); letter-spacing: 2px; }
+.eq-big .eq-q { color: var(--accent); }
+
+/* ---- 竖式 ---- */
+.column { display: inline-grid; gap: 2px 0; margin: 8px auto; }
+.col-head { font-size: 13px; color: var(--muted); font-weight: 700; text-align: center; }
+.col-head.h { color: var(--hund); } .col-head.t { color: var(--tens); } .col-head.o { color: var(--ones); }
+.col-cell { position: relative; height: 62px; display: flex; align-items: flex-end; justify-content: center; font-size: 36px; font-weight: 800; color: var(--ink); padding-bottom: 4px; border-radius: 6px; }
+.col-cell.h .dg { color: var(--hund); } .col-cell.t .dg { color: var(--tens); } .col-cell.o .dg { color: var(--ones); }
+.col-cell.hl { background: #fff3d6; }
+.col-cell .regroup { position: absolute; top: 2px; left: 0; right: 0; text-align: center; font-size: 16px; font-weight: 700; color: var(--bad); line-height: 1; }
+.col-cell .regroup .carry { font-style: normal; color: var(--bad); }
+.col-cell .op { position: absolute; left: -26px; bottom: 4px; color: var(--muted); font-size: 32px; }
+.col-cell.res { border-top: 3px solid var(--ink); height: 66px; }
+.col-cell .dg.strike { text-decoration: line-through; text-decoration-color: var(--bad); text-decoration-thickness: 3px; opacity: .55; }
+input.col-in { width: 48px; height: 52px; font-size: 34px; font-weight: 800; text-align: center; border: 2px dashed var(--primary); border-radius: 8px; background: #f7f5ff; color: var(--primary-dark); font-family: inherit; outline: none; }
+input.col-in:focus { border-style: solid; background: #efeafd; }
+input.col-in.good { border-color: var(--ok); background: #eafaf1; color: #1e9e56; }
+input.col-in.badf { border-color: var(--bad); background: #fff0f0; color: var(--bad); }
+input.carry-in { width: 36px; height: 20px; font-size: 14px; font-weight: 700; text-align: center; border: 1px dashed #ccc; border-radius: 4px; background: transparent; color: var(--bad); font-family: inherit; outline: none; }
+input.carry-in:focus { border-color: var(--bad); }
+
+/* ---- 方块表格（加减） ---- */
+.blk-table { display: inline-block; margin: 6px auto; border: 2px solid var(--line); border-radius: 12px; overflow: hidden; }
+.blk-row { display: grid; grid-template-columns: 100px 200px 200px 140px; align-items: center; border-bottom: 1px solid var(--line); }
+.blk-row:last-child { border-bottom: none; }
+.blk-num { font-size: 22px; font-weight: 800; color: var(--primary-dark); text-align: center; }
+.blk-cell { padding: 6px; min-height: 60px; display: flex; align-items: center; justify-content: center; border-left: 1px solid var(--line); }
+.blk-cell.hl { background: #fff3d6; }
+.blk-cell .blocks svg { max-height: 130px; width: auto; }
+.blk-row.head div { font-size: 14px; font-weight: 700; color: var(--muted); text-align: center; padding: 4px; background: #f4f1fc; }
+.blk-row.head .h { color: var(--hund); } .blk-row.head .t { color: var(--tens); } .blk-row.head .o { color: var(--ones); }
+.blk-row.sum div { font-size: 28px; font-weight: 800; text-align: center; padding: 6px; min-height: 48px; }
+.blk-row.sum .h { color: var(--hund); } .blk-row.sum .t { color: var(--tens); } .blk-row.sum .o { color: var(--ones); }
+.blk-row.sum .on { background: #fff3d6; }
+.blk.crossed rect { fill: #ffb3b3 !important; fill-opacity: .5 !important; stroke: var(--bad) !important; }
+.blk.crossed line { stroke: var(--bad) !important; }
+.blk.crossed { opacity: .7; }
+@media (max-width: 760px) { .blk-row { grid-template-columns: 70px 1fr 1fr 90px; } }
