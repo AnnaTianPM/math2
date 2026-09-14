@@ -103,7 +103,7 @@
       <div id="mode"></div>`;
     const box = $('#mode');
     if (!sub) return renderOverview(kp, box);
-    if (sub === 'infinite') return renderInfiniteMenu(kp, box, arg);
+    if (sub === 'infinite') return renderOverview(kp, box);   // 随机出题暂不开放，题目全部来自课本
     const sec = kp.sections.find(x => x.id === sub);
     if (!sec) return renderOverview(kp, box);
     renderSection(kp, sec, box, arg === 'wrong');
@@ -126,9 +126,7 @@
     }).join('');
     box.innerHTML = `
       <div class="card"><div class="sub">${esc(kp.intro.zh)}<br><span class="en">${esc(kp.intro.en)}</span></div></div>
-      ${cards}
-      <div class="card"><div class="row"><span class="unit-num">♾️</span><div class="grow"><h2 style="margin:0">无限练习 <span class="en">More practice</span></h2><div class="sub">课本题做完了？随机出同类型的新题，想练多少练多少。</div></div>
-        <a class="btn accent" href="#/kp/${kp.id}/infinite">去练 ▶</a></div></div>`;
+      ${cards}`;
   }
 
   // 一个部分：先例题（分步讲解），下面紧跟练习
@@ -428,7 +426,7 @@
       const q = current(), qv = questionView(q);
       const total = cfg.mode === 'gen' ? null : questions.length;
       const dots = cfg.mode === 'gen' ? `<span class="streak">已做 ${state.done} 题 ｜ 答对 ${state.right} ｜ 连对 🔥 ${state.streak}（最高 ${state.best}）</span>`
-        : `<div class="qprogress">${questions.map((qq, j) => { const r = state.results[qq.id]; return `<span class="qdot ${j === state.i ? 'cur' : ''} ${r || ''}">${j + 1}</span>`; }).join('')}</div>`;
+        : `<div class="qprogress">${questions.map((qq, j) => { const r = state.results[qq.id]; return `<span class="qdot ${j === state.i ? 'cur' : ''} ${r || ''}" title="${r === 'skip' ? '跳过' : ''}">${r === 'skip' ? '⏭' : j + 1}</span>`; }).join('')}</div>`;
       const head = cfg.mode === 'gen' ? '♾️ 无限练习' : cfg.mode === 'redo' ? '📕 错题重做' : `✏️ 练习 Practice`;
       box.innerHTML = `<div class="card">
         <div class="qhead"><h2>${head}</h2>${dots}</div>
@@ -441,12 +439,13 @@
           <button class="btn ok" id="submit">检查 ✔</button></div>`}
         <div class="feedback" id="fb"></div>
         <div class="actions" id="actions"></div>
-        <div class="center mt"><a class="btn secondary small" href="#/kp/${kp.id}${cfg.mode === 'gen' ? '/infinite' : ''}" id="quit">${cfg.mode === 'gen' ? '结束练习' : '返回知识点'}</a></div>
+        <div class="center mt"><button class="btn secondary small" id="skip">会了，跳过这题 ⏭</button> <a class="btn secondary small" href="#/kp/${kp.id}${cfg.mode === 'gen' ? '/infinite' : ''}" id="quit">${cfg.mode === 'gen' ? '结束练习' : '返回知识点'}</a></div>
       </div>`;
       const inp = $('#ans', box);
       if (inp && (!cfg.noAutoFocus || state.i > 0)) inp.focus({ preventScroll: true });
       state.phase = 'answer'; state.attempts = 0;
       if (inp) $('#submit', box).onclick = () => submit();
+      $('#skip', box).onclick = skip;
       if (qv.choices) {
         box.querySelectorAll('.choice').forEach(b => b.onclick = () => submit(b.dataset.val));
         if (onChoiceKey) document.removeEventListener('keydown', onChoiceKey);
@@ -523,6 +522,14 @@
       setTimeout(() => { if (state.phase === 'next' && onKey) document.addEventListener('keydown', onKey); }, 50);
     }
 
+    // 跳过：不算对也不算错，不进错题本，直接下一题
+    function skip() {
+      if (state.phase !== 'answer') return;
+      const q = current();
+      state.results[q.id] = 'skip';
+      state.phase = 'next';
+      next();
+    }
     function next() {
       if (onKey) document.removeEventListener('keydown', onKey); onKey = null;
       if (onChoiceKey) document.removeEventListener('keydown', onChoiceKey); onChoiceKey = null;
@@ -531,17 +538,19 @@
     }
 
     function finish() {
-      const list = questions.map((q, j) => { const r = state.results[q.id]; const qv = questionView(q); return `<li><span class="${r === 'bad' ? 'bad' : 'ok'}">${r === 'ok' ? '✅' : r === 'fixed' ? '🟡' : '❌'}</span> 第 ${j + 1} 题 <b>${esc(qv.answerText)}</b></li>`; }).join('');
+      const list = questions.map((q, j) => { const r = state.results[q.id]; const qv = questionView(q); return `<li><span class="${r === 'bad' ? 'bad' : r === 'skip' ? 'skip' : 'ok'}">${r === 'ok' ? '✅' : r === 'fixed' ? '🟡' : r === 'skip' ? '⏭' : '❌'}</span> 第 ${j + 1} 题 <b>${esc(qv.answerText)}</b>${r === 'skip' ? ' <span class="sub">跳过</span>' : ''}</li>`; }).join('');
       const wrongQs = questions.filter(q => state.results[q.id] === 'bad');
       const n = questions.length;
-      const face = state.right === n ? '🏆' : state.right >= n * 0.7 ? '😊' : '💪';
+      const skipped = questions.filter(q => state.results[q.id] === 'skip').length;
+      const answered = n - skipped;
+      const face = answered === 0 ? '⏭' : state.right === answered ? '🏆' : state.right >= answered * 0.7 ? '😊' : '💪';
       const nextBtn = cfg.next ? `<a class="btn accent big" href="#/kp/${kp.id}/${cfg.next.id}">下一部分 (${cfg.next.id}) ▶</a>` : `<a class="btn accent big" href="#/kp/${kp.id}">完成这个知识点 🏁</a>`;
-      box.innerHTML = `<div class="card center"><div class="summary-big">${face}</div><h2>答对 ${state.right} / ${n} 题</h2>
+      box.innerHTML = `<div class="card center"><div class="summary-big">${face}</div><h2>答对 ${state.right} / ${answered} 题${skipped ? `，跳过 ${skipped} 题` : ''}</h2>
         <ul class="result-list" style="text-align:left;max-width:420px;margin:10px auto">${list}</ul>
         <div class="actions">${wrongQs.length ? '<button class="btn" id="redoWrong">再做一遍错题 🔁</button>' : ''}
           ${cfg.mode === 'book' ? nextBtn : `<a class="btn" href="#/kp/${kp.id}">返回知识点</a>`}
-          ${cfg.section ? `<a class="btn secondary" href="#/kp/${kp.id}/infinite/${cfg.section.type}">练更多同类题 ♾️</a>` : ''}</div></div>`;
-      if (state.right === n) confetti();
+          </div></div>`;
+      if (answered && state.right === answered) confetti();
       if (wrongQs.length) $('#redoWrong', box).onclick = () => { runSession(kp, box, Object.assign({}, cfg, { questions: wrongQs, noAutoFocus: false })); box.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
     }
     function finishGen() {

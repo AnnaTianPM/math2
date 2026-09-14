@@ -156,6 +156,8 @@ h2 { font-size: 24px; margin: 0 0 12px; }
 .qdot.ok { background: var(--ok); color: #fff; }
 .qdot.bad { background: var(--bad); color: #fff; }
 .qdot.fixed { background: #ffd166; color: #fff; }
+.qdot.skip { background: #f0f0f4; color: #aaa; }
+.result-list .skip { color: #aaa; }
 .question { font-size: 26px; font-weight: 700; margin: 12px 0; }
 .question .en { display: block; font-size: 16px; }
 .qstage { display: flex; justify-content: center; align-items: center; min-height: 160px; margin: 8px 0; }
