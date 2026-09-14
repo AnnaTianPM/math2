@@ -151,7 +151,8 @@ h2 { font-size: 24px; margin: 0 0 12px; }
 /* practice */
 .qhead { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
 .qprogress { display: flex; gap: 6px; flex-wrap: wrap; }
-.qdot { width: 22px; height: 22px; border-radius: 6px; background: #e6e6ee; font-size: 12px; display: inline-flex; align-items: center; justify-content: center; color: #888; font-weight: 700; }
+.qdot { width: 26px; height: 26px; border-radius: 6px; background: #e6e6ee; font-size: 13px; display: inline-flex; align-items: center; justify-content: center; color: #888; font-weight: 700; border: none; cursor: pointer; padding: 0; transition: transform .1s; }
+.qdot:hover { transform: scale(1.2); outline: 2px solid var(--primary); }
 .qdot.cur { outline: 3px solid var(--primary); }
 .qdot.ok { background: var(--ok); color: #fff; }
 .qdot.bad { background: var(--bad); color: #fff; }

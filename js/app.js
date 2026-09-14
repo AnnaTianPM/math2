@@ -380,6 +380,13 @@
     return list;
   }
 
+  // 一句话说明这道题是什么（题号悬停、错题本用）
+  function qLabel(q) {
+    if (q.type === 'blocks') return `看方块写数字（${q.h} 个百 ${q.t} 个十 ${q.o} 个一）`;
+    if (q.type === 'num2words') return `${q.n} 用英文怎么说`;
+    return `${NumWords.toWords(q.n)} 是多少`;
+  }
+
   function questionView(q) {
     if (q.type === 'blocks') return {
       prompt: { zh: '这是多少？', en: 'What number is this?' },
@@ -426,7 +433,7 @@
       const q = current(), qv = questionView(q);
       const total = cfg.mode === 'gen' ? null : questions.length;
       const dots = cfg.mode === 'gen' ? `<span class="streak">已做 ${state.done} 题 ｜ 答对 ${state.right} ｜ 连对 🔥 ${state.streak}（最高 ${state.best}）</span>`
-        : `<div class="qprogress">${questions.map((qq, j) => { const r = state.results[qq.id]; return `<span class="qdot ${j === state.i ? 'cur' : ''} ${r || ''}" title="${r === 'skip' ? '跳过' : ''}">${r === 'skip' ? '⏭' : j + 1}</span>`; }).join('')}</div>`;
+        : `<div class="qprogress">${questions.map((qq, j) => { const r = state.results[qq.id]; return `<button class="qdot ${j === state.i ? 'cur' : ''} ${r || ''}" data-jump="${j}" title="第 ${j + 1} 题：${esc(qLabel(qq))}${r === 'skip' ? '（跳过）' : r === 'bad' ? '（做错）' : r ? '（做对）' : ''}">${r === 'skip' ? '⏭' : j + 1}</button>`; }).join('')}</div>`;
       const head = cfg.mode === 'gen' ? '♾️ 无限练习' : cfg.mode === 'redo' ? '📕 错题重做' : `✏️ 练习 Practice`;
       box.innerHTML = `<div class="card">
         <div class="qhead"><h2>${head}</h2>${dots}</div>
@@ -446,6 +453,7 @@
       state.phase = 'answer'; state.attempts = 0;
       if (inp) $('#submit', box).onclick = () => submit();
       $('#skip', box).onclick = skip;
+      box.querySelectorAll('[data-jump]').forEach(b => b.onclick = () => jumpTo(parseInt(b.dataset.jump, 10)));
       if (qv.choices) {
         box.querySelectorAll('.choice').forEach(b => b.onclick = () => submit(b.dataset.val));
         if (onChoiceKey) document.removeEventListener('keydown', onChoiceKey);
@@ -522,6 +530,14 @@
       setTimeout(() => { if (state.phase === 'next' && onKey) document.addEventListener('keydown', onKey); }, 50);
     }
 
+    // 点题号直接跳到那道题
+    function jumpTo(j) {
+      if (j === state.i || j < 0 || j >= questions.length) return;
+      if (onKey) document.removeEventListener('keydown', onKey); onKey = null;
+      if (onChoiceKey) document.removeEventListener('keydown', onChoiceKey); onChoiceKey = null;
+      state.i = j; render();
+      const inp = $('#ans', box); if (inp) inp.focus({ preventScroll: true });
+    }
     // 跳过：不算对也不算错，不进错题本，直接下一题
     function skip() {
       if (state.phase !== 'answer') return;
@@ -538,10 +554,10 @@
     }
 
     function finish() {
-      const list = questions.map((q, j) => { const r = state.results[q.id]; const qv = questionView(q); return `<li><span class="${r === 'bad' ? 'bad' : r === 'skip' ? 'skip' : 'ok'}">${r === 'ok' ? '✅' : r === 'fixed' ? '🟡' : r === 'skip' ? '⏭' : '❌'}</span> 第 ${j + 1} 题 <b>${esc(qv.answerText)}</b>${r === 'skip' ? ' <span class="sub">跳过</span>' : ''}</li>`; }).join('');
+      const list = questions.map((q, j) => { const r = state.results[q.id]; const qv = questionView(q); return `<li><span class="${r === 'bad' ? 'bad' : (r === 'skip' || !r) ? 'skip' : 'ok'}">${r === 'ok' ? '✅' : r === 'fixed' ? '🟡' : r === 'skip' ? '⏭' : r === 'bad' ? '❌' : '⬜'}</span> 第 ${j + 1} 题 <b>${esc(qv.answerText)}</b>${r === 'skip' ? ' <span class="sub">跳过</span>' : !r ? ' <span class="sub">没做</span>' : ''}</li>`; }).join('');
       const wrongQs = questions.filter(q => state.results[q.id] === 'bad');
       const n = questions.length;
-      const skipped = questions.filter(q => state.results[q.id] === 'skip').length;
+      const skipped = questions.filter(q => state.results[q.id] === 'skip' || !state.results[q.id]).length;
       const answered = n - skipped;
       const face = answered === 0 ? '⏭' : state.right === answered ? '🏆' : state.right >= answered * 0.7 ? '😊' : '💪';
       const nextBtn = cfg.next ? `<a class="btn accent big" href="#/kp/${kp.id}/${cfg.next.id}">下一部分 (${cfg.next.id}) ▶</a>` : `<a class="btn accent big" href="#/kp/${kp.id}">完成这个知识点 🏁</a>`;
