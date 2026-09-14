@@ -331,3 +331,9 @@ input.carry-in:focus { border-color: var(--bad); }
 .pic-array { display: inline-grid; gap: 4px 8px; margin: 6px auto; padding: 10px 14px; border: 2px solid #d9d2f7; border-radius: 14px; }
 .pic-array .pic-item.on { background: #fff3d6; border-radius: 6px; }
 .qstage .pic-groups, .qstage .pic-array { max-width: 100%; }
+
+/* ---- 秤 ---- */
+.scale-row { display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; align-items: flex-end; }
+.digital { display: inline-flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px 14px; border: 2px solid var(--line); border-radius: 14px; background: #fbfaff; }
+.digital-item { font-size: 16px; font-weight: 700; }
+.digital-screen { font-family: "Consolas", monospace; font-size: 26px; font-weight: 700; background: #1b2b1b; color: #7CFC00; padding: 4px 16px; border-radius: 8px; letter-spacing: 2px; }

@@ -107,6 +107,41 @@
     return steps;
   };
 
+  window.WordUI = { answerOf, equationOf, bar };
+
+  /* word2：两步应用题。q = { id, type:'word2', en, zh, steps:[{ask:{zh,en}, model, sentence}, {ask, model(可含 'ANS1'), sentence}] } */
+  window.QTypes.word2 = q => {
+    const a1 = answerOf({ model: q.steps[0].model });
+    const m2 = JSON.parse(JSON.stringify(q.steps[1].model), (k, v) => v === 'ANS1' ? a1 : v);
+    const a2 = answerOf({ model: m2 });
+    const e1 = equationOf({ model: q.steps[0].model }), e2 = equationOf({ model: m2 });
+    const sent = (st, key) => esc(st.sentence.en).replace('___', `<input class="blank" data-key="${key}" type="text" inputmode="numeric" autocomplete="off" maxlength="4" style="width:4em">`);
+    return {
+      prompt: { zh: '两步应用题：先算 (a)，再用 (a) 的答案算 (b)', en: 'Two-step problem' },
+      stage: `<div class="wp-text"><div class="wp-en">${esc(q.en)}</div><div class="wp-zh"><button class="speak small-speak" id="zhToggle" title="显示/隐藏中文">中</button><span id="zhText" hidden>${esc(q.zh)}</span></div>
+        <div class="wp-en" style="margin-top:8px">(a) ${esc(q.steps[0].ask.en)}<br>(b) ${esc(q.steps[1].ask.en)}</div><div class="wp-zh" id="zhAsk" hidden>(a) ${esc(q.steps[0].ask.zh)}　(b) ${esc(q.steps[1].ask.zh)}</div></div>`,
+      custom: {
+        html: () => `<div class="fill">(a) ${sent(q.steps[0], 'a')}<br>(b) ${sent(q.steps[1], 'b')}</div><div class="center mt"><button class="btn ok" id="submit">检查 ✔</button></div>`,
+        bind: (box, submit) => {
+          const ins = [...box.querySelectorAll('input.blank')];
+          ins.forEach((inp, i) => { inp.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); if (i === 0 && !ins[1].value) ins[1].focus(); else submit(); } }; });
+          box.querySelector('#submit').onclick = () => submit(); ins[0].focus({ preventScroll: true });
+          const t = box.querySelector('#zhToggle'); if (t) t.onclick = () => { const z = box.querySelector('#zhText'); z.hidden = !z.hidden; const z2 = box.querySelector('#zhAsk'); if (z2) z2.hidden = z.hidden; };
+        },
+        value: box => { const a = box.querySelector('[data-key="a"]').value.trim(), b = box.querySelector('[data-key="b"]').value.trim(); return (a || b) ? JSON.stringify({ a, b }) : null; },
+        markWrong: (box, val) => { const v = JSON.parse(val); const ia = box.querySelector('[data-key="a"]'), ib = box.querySelector('[data-key="b"]'); const ga = parseInt(v.a, 10) === a1, gb = parseInt(v.b, 10) === a2; ia.classList.add(ga ? 'good' : 'badf'); ib.classList.add(gb ? 'good' : 'badf'); if (ga) ia.disabled = true; (ga ? ib : ia).select(); },
+        showAnswer: box => { const ia = box.querySelector('[data-key="a"]'), ib = box.querySelector('[data-key="b"]'); ia.value = a1; ib.value = a2; [ia, ib].forEach(i => { i.classList.remove('badf'); i.classList.add('good'); i.disabled = true; }); box.querySelector('#submit').disabled = true; },
+        lock: box => { box.querySelectorAll('input').forEach(i => i.disabled = true); box.querySelector('#submit').disabled = true; },
+        restore: (box, val, status) => { let v = {}; try { v = JSON.parse(val || '{}'); } catch (e) { /* */ } const ia = box.querySelector('[data-key="a"]'), ib = box.querySelector('[data-key="b"]'); ia.value = v.a || ''; ib.value = v.b || ''; ia.classList.add(parseInt(v.a, 10) === a1 ? 'good' : 'badf'); ib.classList.add(parseInt(v.b, 10) === a2 ? 'good' : 'badf'); box.querySelectorAll('input').forEach(i => i.disabled = true); box.querySelector('#submit').disabled = true; const t = box.querySelector('#zhToggle'); if (t) t.onclick = () => { const z = box.querySelector('#zhText'); z.hidden = !z.hidden; const z2 = box.querySelector('#zhAsk'); if (z2) z2.hidden = z.hidden; }; },
+      },
+      hint: { zh: `(a) 先算 ${e1.expr}。(b) 再用 (a) 的答案算：${e2.expr}。`, en: `(a) ${e1.expr}; (b) ${e2.expr}.` },
+      answerText: `(a) ${a1}, (b) ${a2}`,
+      check: v => { try { const o = JSON.parse(v); return parseInt(o.a, 10) === a1 && parseInt(o.b, 10) === a2; } catch (e) { return false; } },
+      answerDisplay: v => { try { const o = JSON.parse(v); return `(a) ${o.a}, (b) ${o.b}`; } catch (e) { return v; } },
+      explainKind: 'word2', n: q,
+    };
+  };
+
   window.QTypes.word = q => {
     const ans = answerOf(q), eq = equationOf(q);
     const sent = esc(q.sentence.en).replace('___', `<input class="blank" id="ans" data-key="a" type="text" inputmode="numeric" autocomplete="off" maxlength="4" style="width:4em">`);
