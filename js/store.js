@@ -11,17 +11,21 @@ const Store = (() => {
     try { localStorage.setItem(KEY, JSON.stringify(data)); } catch (e) { /* ignore */ }
   }
 
-  // progress[qid] = { status: 'ok' | 'bad' | 'fixed', attempts }
-  function setProgress(qid, status) {
+  // progress[qid] = { status: 'ok' | 'bad' | 'fixed', attempts, answer }
+  function setProgress(qid, status, answer) {
     const p = data.progress[qid] || { attempts: 0 };
     p.attempts++;
-    // 一旦答对过（哪怕之前错过），显示为 fixed；从没错过则 ok
-    if (status === 'ok') p.status = (p.status === 'bad' || p.status === 'fixed') ? 'fixed' : 'ok';
-    else p.status = 'bad';
+    p.answer = answer;
+    // 以前错过、现在对了 → fixed（黄色）；从没错过 → ok（绿色）
+    if (status === 'bad') p.status = 'bad';
+    else p.status = (status === 'fixed' || p.status === 'bad' || p.status === 'fixed') ? 'fixed' : 'ok';
     data.progress[qid] = p;
     save();
   }
   function getProgress(qid) { return data.progress[qid]; }
+  // 清掉一道题的记录（进度 + 错题本里的这条）
+  function clearProgress(qid) { delete data.progress[qid]; delete data.wrong[qid]; save(); }
+  function clearMany(qids) { qids.forEach(id => { delete data.progress[id]; delete data.wrong[id]; }); save(); }
 
   // 错题本：wrong[qid] = { q, kp, yourAnswer, correct, times, need, ts }
   function addWrong(q, kpId, yourAnswer, correctText) {
@@ -58,5 +62,5 @@ const Store = (() => {
   function importJSON(text) { data = JSON.parse(text); save(); }
   function reset() { data = { progress: {}, wrong: {}, stats: { correct: 0, wrong: 0, stars: 0 } }; save(); }
 
-  return { setProgress, getProgress, addWrong, wrongSolved, wrongFailed, removeWrong, clearWrong, wrongList, addStar, stats, exportJSON, importJSON, reset };
+  return { setProgress, getProgress, clearProgress, clearMany, addWrong, wrongSolved, wrongFailed, removeWrong, clearWrong, wrongList, addStar, stats, exportJSON, importJSON, reset };
 })();

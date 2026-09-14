@@ -122,11 +122,18 @@
           <div class="sub">📖 例题：${esc(s.example.title.zh)} ｜ ✏️ ${st.total} 题 ${started ? `｜ ✅ ${st.ok} 🟡 ${st.fixed} ❌ ${st.bad}` : ''}</div></div>
         <a class="btn ${finished ? 'secondary' : ''}" href="#/kp/${kp.id}/${s.id}">${finished ? '再看一遍' : started ? '继续 ▶' : '开始 ▶'}</a>
         ${wrongs ? `<a class="btn secondary" href="#/kp/${kp.id}/${s.id}/wrong">只做错题 (${wrongs})</a>` : ''}
+        ${started ? `<button class="btn secondary small" data-clear="${s.id}" title="把这部分的记录全部清掉，重新开始">清空记录</button>` : ''}
       </div></div>`;
     }).join('');
     box.innerHTML = `
       <div class="card"><div class="sub">${esc(kp.intro.zh)}<br><span class="en">${esc(kp.intro.en)}</span></div></div>
       ${cards}`;
+    box.querySelectorAll('[data-clear]').forEach(b => b.onclick = () => {
+      const sec = kp.sections.find(x => x.id === b.dataset.clear);
+      if (confirm(`确定清空第 ${sec.id} 部分的 ${sec.questions.length} 道题的记录吗？（错题本里的这些题也会移出）`)) {
+        Store.clearMany(sec.questions.map(q => q.id)); updateWrongBadge(); renderOverview(kp, box);
+      }
+    });
   }
 
   // 一个部分：先例题（分步讲解），下面紧跟练习
@@ -134,7 +141,7 @@
     const idx = kp.sections.indexOf(sec);
     let questions = sec.questions;
     if (onlyWrong) questions = sec.questions.filter(q => (Store.getProgress(q.id) || {}).status === 'bad');
-    if (!questions.length) questions = sec.questions;
+    if (!questions.length) { questions = sec.questions; onlyWrong = false; }
     box.innerHTML = `
       <div class="sec-head"><span class="unit-num">${sec.id}</span><h2 style="margin:0">${esc(sec.title.zh)} <span class="en">${esc(sec.title.en)}</span></h2></div>
       <div class="card" id="stepper"></div>
@@ -146,7 +153,7 @@
       title: `📖 例题 Example：${esc(sec.example.title.zh)} <span class="en">${esc(sec.example.title.en)}</span>`,
       doneLabel: '开始练习 ✏️', onDone: scrollToPractice,
     });
-    runSession(kp, practiceBox, { mode: 'book', section: sec, questions, next: kp.sections[idx + 1] || null, noAutoFocus: true });
+    runSession(kp, practiceBox, { mode: 'book', section: sec, questions, retry: onlyWrong, next: kp.sections[idx + 1] || null, noAutoFocus: true });
   }
 
   /* 分步讲解引擎：steps = [{zh, en, render(stage)}]，render 可返回一个 cleanup 函数 */
@@ -418,59 +425,127 @@
     };
   }
 
-  /* 练习会话：mode = book（课本题）| gen（无限）| redo（错题本重做） */
+  /* 练习会话：mode = book（课本题，记录进度）| redo（错题本重做）| gen（随机题，暂未开放）
+   * cfg.retry = true 时，忽略这些题以前的记录，当作新题重做（“只做错题”用） */
   function runSession(kp, box, cfg) {
-    const state = { i: 0, attempts: 0, results: {}, streak: 0, best: 0, genSeq: 0, phase: 'answer', done: 0, right: 0 };
+    const state = { i: 0, attempts: 0, results: {}, answers: {}, streak: 0, best: 0, genSeq: 0, phase: 'answer', done: 0, right: 0 };
     let questions = cfg.questions ? cfg.questions.slice() : [];
     const nextGen = () => kp.generate(cfg.genType, state.genSeq++);
     if (cfg.mode === 'gen') questions = [nextGen()];
-    const bookLike = cfg.mode === 'book';
-    let onKey = null, onChoiceKey = null;
+    const book = cfg.mode === 'book';
+    const listeners = [];
+    function listen(fn) { document.addEventListener('keydown', fn); listeners.push(fn); }
+    function unlisten() { listeners.forEach(f => document.removeEventListener('keydown', f)); listeners.length = 0; }
+    window.addEventListener('hashchange', unlisten, { once: true });
 
-    function current() { return questions[state.i]; }
+    // 这道题的状态：本次做过用本次的；课本模式再看保存的记录
+    const statusOf = q => state.results[q.id] !== undefined ? state.results[q.id] : (book && !cfg.retry ? (Store.getProgress(q.id) || {}).status : undefined);
+    const answerOf = q => state.answers[q.id] !== undefined ? state.answers[q.id] : (book ? (Store.getProgress(q.id) || {}).answer : undefined);
+    function record(q, status, answer) {
+      state.results[q.id] = status; state.answers[q.id] = answer;
+      if (book) Store.setProgress(q.id, status, answer);
+    }
+    const statusLabel = r => r === 'ok' ? '（做对）' : r === 'fixed' ? '（改对）' : r === 'bad' ? '（做错）' : '（没做）';
+    // 从第一道没做的题开始
+    if (cfg.mode !== 'gen') { const k = questions.findIndex(q => !statusOf(q)); state.i = k < 0 ? 0 : k; }
+
+    const current = () => questions[state.i];
+    const isLast = () => cfg.mode !== 'gen' && state.i === questions.length - 1;
+
+    function navHTML() {
+      if (cfg.mode === 'gen') return `<span class="streak">已做 ${state.done} 题 ｜ 答对 ${state.right} ｜ 连对 🔥 ${state.streak}（最高 ${state.best}）</span>`;
+      return `<div class="qnav">
+        <button class="navbtn" id="prevQ" title="上一题" ${state.i === 0 ? 'disabled' : ''}>◀</button>
+        <div class="qprogress">${questions.map((qq, j) => { const r = statusOf(qq); return `<button class="qdot ${j === state.i ? 'cur' : ''} ${r || ''}" data-jump="${j}" title="第 ${j + 1} 题：${esc(qLabel(qq))}${statusLabel(r)}">${j + 1}</button>`; }).join('')}</div>
+        <button class="navbtn" id="nextQ" title="下一题" ${isLast() ? 'disabled' : ''}>▶</button>
+        <button class="btn small secondary" id="resultBtn">看结果 🏁</button></div>`;
+    }
 
     function render() {
+      unlisten();
       const q = current(), qv = questionView(q);
-      const total = cfg.mode === 'gen' ? null : questions.length;
-      const dots = cfg.mode === 'gen' ? `<span class="streak">已做 ${state.done} 题 ｜ 答对 ${state.right} ｜ 连对 🔥 ${state.streak}（最高 ${state.best}）</span>`
-        : `<div class="qprogress">${questions.map((qq, j) => { const r = state.results[qq.id]; return `<button class="qdot ${j === state.i ? 'cur' : ''} ${r || ''}" data-jump="${j}" title="第 ${j + 1} 题：${esc(qLabel(qq))}${r === 'skip' ? '（跳过）' : r === 'bad' ? '（做错）' : r ? '（做对）' : ''}">${r === 'skip' ? '⏭' : j + 1}</button>`; }).join('')}</div>`;
-      const head = cfg.mode === 'gen' ? '♾️ 无限练习' : cfg.mode === 'redo' ? '📕 错题重做' : `✏️ 练习 Practice`;
+      const head = cfg.mode === 'gen' ? '♾️ 练习' : cfg.mode === 'redo' ? '📕 错题重做' : `✏️ 练习 Practice`;
+      const inputArea = qv.choices
+        ? `<div class="choices" id="choices">${qv.choices.map((c, i) => `<button class="choice" data-val="${esc(c)}"><span class="key">${i + 1}</span>${esc(c)}</button>`).join('')}</div>
+           <div class="center sub" id="choiceTip">点一个答案，或按键盘 1 2 3 4 ｜ Click an answer or press 1-4</div>`
+        : `<div class="answer-row"><label>答案 Answer:</label>
+           <input class="ans" id="ans" type="text" inputmode="numeric" autocomplete="off" spellcheck="false" placeholder="?">
+           <button class="btn ok" id="submit">检查 ✔</button></div>`;
       box.innerHTML = `<div class="card">
-        <div class="qhead"><h2>${head}</h2>${dots}</div>
-        <div class="question">${total ? `第 ${state.i + 1} 题：` : ''}${qv.prompt.zh} <button class="speak" id="qSpeak">🔊</button><span class="en">${qv.prompt.en}</span></div>
+        <div class="qhead"><h2>${head}</h2>${navHTML()}</div>
+        <div class="question">${cfg.mode === 'gen' ? '' : `第 ${state.i + 1} 题：`}${qv.prompt.zh} <button class="speak" id="qSpeak">🔊</button><span class="en">${qv.prompt.en}</span></div>
         <div class="qstage">${qv.stage}</div>
-        ${qv.choices ? `<div class="choices" id="choices">${qv.choices.map((c, i) => `<button class="choice" data-val="${esc(c)}"><span class="key">${i + 1}</span>${esc(c)}</button>`).join('')}</div>
-          <div class="center sub">点一个答案，或按键盘 1 2 3 4 ｜ Click an answer or press 1-4</div>` : `
-        <div class="answer-row"><label>答案 Answer:</label>
-          <input class="ans" id="ans" type="text" inputmode="numeric" autocomplete="off" spellcheck="false" placeholder="?">
-          <button class="btn ok" id="submit">检查 ✔</button></div>`}
+        ${inputArea}
         <div class="feedback" id="fb"></div>
         <div class="actions" id="actions"></div>
-        <div class="center mt"><button class="btn secondary small" id="skip">会了，跳过这题 ⏭</button> <a class="btn secondary small" href="#/kp/${kp.id}${cfg.mode === 'gen' ? '/infinite' : ''}" id="quit">${cfg.mode === 'gen' ? '结束练习' : '返回知识点'}</a></div>
+        <div class="center mt"><a class="btn secondary small" href="#/kp/${kp.id}" id="quit">${cfg.mode === 'gen' ? '结束练习' : '返回知识点'}</a></div>
       </div>`;
-      const inp = $('#ans', box);
-      if (inp && (!cfg.noAutoFocus || state.i > 0)) inp.focus({ preventScroll: true });
-      state.phase = 'answer'; state.attempts = 0;
-      if (inp) $('#submit', box).onclick = () => submit();
-      $('#skip', box).onclick = skip;
-      box.querySelectorAll('[data-jump]').forEach(b => b.onclick = () => jumpTo(parseInt(b.dataset.jump, 10)));
-      if (qv.choices) {
-        box.querySelectorAll('.choice').forEach(b => b.onclick = () => submit(b.dataset.val));
-        if (onChoiceKey) document.removeEventListener('keydown', onChoiceKey);
-        onChoiceKey = e => { const k = parseInt(e.key, 10); if (state.phase === 'answer' && k >= 1 && k <= qv.choices.length && !$('.overlay')) { const b = box.querySelectorAll('.choice')[k - 1]; if (b && !b.disabled) b.click(); } };
-        document.addEventListener('keydown', onChoiceKey);
-      }
       $('#qSpeak', box).onclick = () => speak(qv.prompt.zh, qv.prompt.en + (q.type === 'words2num' ? '. ' + NumWords.toWords(q.n) : ''));
       if (cfg.mode === 'gen') $('#quit', box).onclick = e => { e.preventDefault(); finishGen(); };
-      window.addEventListener('hashchange', () => { if (onKey) document.removeEventListener('keydown', onKey); onKey = null; if (onChoiceKey) document.removeEventListener('keydown', onChoiceKey); onChoiceKey = null; }, { once: true });
-      if (inp) inp.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); submit(); } };
+      else {
+        $('#prevQ', box).onclick = () => jumpTo(state.i - 1);
+        $('#nextQ', box).onclick = () => jumpTo(state.i + 1);
+        $('#resultBtn', box).onclick = finish;
+        box.querySelectorAll('[data-jump]').forEach(b => b.onclick = () => jumpTo(parseInt(b.dataset.jump, 10)));
+      }
+      const done = statusOf(q);
+      if (done) showReviewed(q, qv, done); else setupAnswering(q, qv);
+    }
+
+    // 还没做：可以作答
+    function setupAnswering(q, qv) {
+      state.phase = 'answer'; state.attempts = 0;
+      const inp = $('#ans', box);
+      if (inp) {
+        if (!cfg.noAutoFocus || state.i > 0) inp.focus({ preventScroll: true });
+        $('#submit', box).onclick = () => submit();
+        inp.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); submit(); } };
+      }
+      if (qv.choices) {
+        box.querySelectorAll('.choice').forEach(b => b.onclick = () => submit(b.dataset.val));
+        listen(e => { const k = parseInt(e.key, 10); if (state.phase === 'answer' && k >= 1 && k <= qv.choices.length && !$('.overlay')) { const b = box.querySelectorAll('.choice')[k - 1]; if (b && !b.disabled) b.click(); } });
+      }
+    }
+
+    // 已经做过：只读回看，可重做
+    function showReviewed(q, qv, status) {
+      state.phase = 'next';
+      const ans = answerOf(q);
+      const inp = $('#ans', box), fb = $('#fb', box);
+      if (inp) { inp.value = ans !== undefined ? ans : ''; inp.disabled = true; inp.classList.add(status === 'bad' ? 'shake' : 'good'); $('#submit', box).disabled = true; }
+      if (qv.choices) {
+        box.querySelectorAll('.choice').forEach(b => b.disabled = true);
+        markChoice(qv.answerText, 'right');
+        if (status === 'bad' && ans) markChoice(ans, 'wrong');
+        const tip = $('#choiceTip', box); if (tip) tip.textContent = '';
+      }
+      fb.className = 'feedback ' + (status === 'bad' ? 'bad' : 'ok');
+      fb.innerHTML = status === 'ok' ? '✅ 这题做对了 <span class="en">Correct</span>'
+        : status === 'fixed' ? '🟡 这题改对了 <span class="en">Fixed</span>'
+        : `❌ 这题做错了，正确答案是：<b>${esc(qv.answerText)}</b><span class="en">The answer is ${esc(qv.answerText)}</span>`;
+      $('#actions', box).innerHTML = `<button class="btn secondary" id="redoBtn">重做这题 🔄</button>
+        ${status === 'bad' ? '<button class="btn accent" id="explainBtn">看讲解 📖</button>' : ''}
+        <button class="btn" id="nextBtn">${isLast() ? '看结果 🏁' : '下一题 ▶'} <span style="font-size:13px;opacity:.8">(Enter)</span></button>`;
+      $('#redoBtn', box).onclick = () => redoCurrent(q);
+      if (status === 'bad') $('#explainBtn', box).onclick = () => showExplain(qv.explainKind, qv.n);
+      $('#nextBtn', box).onclick = next;
+      listen(e => { if (e.key === 'Enter' && state.phase === 'next' && !$('.overlay')) { e.preventDefault(); next(); } });
+    }
+
+    // 清掉这道题的记录，重新作答
+    function redoCurrent(q) {
+      delete state.results[q.id]; delete state.answers[q.id];
+      if (book) { Store.clearProgress(q.id); updateWrongBadge(); }
+      render();
+      const inp = $('#ans', box); if (inp) inp.focus({ preventScroll: true });
     }
 
     function markChoice(val, cls) { box.querySelectorAll('.choice').forEach(b => { if (b.dataset.val === val) { b.classList.add(cls); b.disabled = true; } }); }
+
     function submit(chosen) {
       if (state.phase !== 'answer') return;
       const q = current(), qv = questionView(q);
-      const inp = $('#ans', box), fb = $('#fb', box), actions = $('#actions', box);
+      const inp = $('#ans', box), fb = $('#fb', box);
       const val = chosen !== undefined ? chosen : inp.value.trim();
       if (!val) { if (inp) inp.focus(); return; }
       if (qv.check(val)) {
@@ -481,99 +556,101 @@
         fb.innerHTML = firstTry ? '🎉 太棒了！答对了！<span class="en">Excellent! Correct!</span>' : '👍 改对了！<span class="en">Good, you fixed it!</span>';
         confetti();
         state.done++; state.right++; state.streak++; state.best = Math.max(state.best, state.streak);
-        state.results[q.id] = firstTry ? 'ok' : 'fixed';
-        if (bookLike) Store.setProgress(q.id, 'ok');
+        record(q, firstTry ? 'ok' : 'fixed', val);
         if (firstTry) Store.addStar(1);
         if (cfg.mode === 'redo') {
           const gone = Store.wrongSolved(q.id);
           fb.innerHTML += gone ? '<span class="hint">🎊 连对两次，这题从错题本移出啦！</span>' : '<span class="hint">再答对一次就能从错题本移出。</span>';
           updateWrongBadge();
+        } else if (Store.wrongList().some(w => w.q.id === q.id)) {
+          const gone = Store.wrongSolved(q.id); updateWrongBadge();
+          if (gone) fb.innerHTML += '<span class="hint">🎊 这题从错题本移出啦！</span>';
         }
-        // 从错题本来的题（book 模式下也可能在错题本里）
-        else if (Store.wrongList().some(w => w.q.id === q.id)) { const gone = Store.wrongSolved(q.id); updateWrongBadge(); if (gone) fb.innerHTML += '<span class="hint">🎊 这题从错题本移出啦！</span>'; }
-        afterAnswer(actions, q, qv, true);
+        afterAnswer(q, qv, true);
       } else {
         state.attempts++;
         if (inp) { inp.classList.remove('shake'); void inp.offsetWidth; inp.classList.add('shake'); }
         if (qv.choices) markChoice(val, 'wrong');
+        fb.className = 'feedback bad';
         if (state.attempts === 1) {
-          fb.className = 'feedback bad';
           const d = qv.diagnose ? qv.diagnose(val) : null;
           fb.innerHTML = `🤔 再想一想 <span class="en">Try again</span><span class="hint">${d ? d.zh + ' ' : ''}提示：${qv.hint.zh}<br><span class="en">${(d ? d.en + ' ' : '') + qv.hint.en}</span></span>`;
           if (inp) inp.select();
           if (autoSpeak) speak('再想一想。' + (d ? d.zh : '') + qv.hint.zh, '');
         } else {
-          fb.className = 'feedback bad';
           fb.innerHTML = `❌ 正确答案是：<b>${esc(qv.answerText)}</b><span class="en">The answer is ${esc(qv.answerText)}</span>`;
           if (qv.choices) { markChoice(qv.answerText, 'right'); box.querySelectorAll('.choice').forEach(b => b.disabled = true); }
           state.done++; state.streak = 0;
-          state.results[q.id] = 'bad';
-          if (bookLike) Store.setProgress(q.id, 'bad');
-          if (cfg.mode === 'redo') { Store.wrongFailed(q.id); Store.addWrong(q, kp.id, val, qv.answerText); }
-          else Store.addWrong(q, kp.id, val, qv.answerText);
+          record(q, 'bad', val);
+          if (cfg.mode === 'redo') Store.wrongFailed(q.id);
+          Store.addWrong(q, kp.id, val, qv.answerText);
           updateWrongBadge();
-          afterAnswer(actions, q, qv, false);
+          afterAnswer(q, qv, false);
         }
       }
     }
 
-    function afterAnswer(actions, q, qv, correct) {
+    function afterAnswer(q, qv, correct) {
       state.phase = 'next';
-      const isLast = cfg.mode !== 'gen' && state.i === questions.length - 1;
-      actions.innerHTML = `${correct ? '' : '<button class="btn accent" id="explainBtn">看讲解 📖</button>'}
-        <button class="btn" id="nextBtn">${isLast ? '看结果 🏁' : '下一题 ▶'} <span style="font-size:13px;opacity:.8">(Enter)</span></button>`;
+      const inp = $('#ans', box); if (inp) { inp.disabled = true; inp.blur(); $('#submit', box).disabled = true; }
+      // 题号颜色刷新
+      const nav = $('.qnav', box); if (nav) { nav.outerHTML = navHTML(); bindNav(); }
+      $('#actions', box).innerHTML = `${correct ? '' : '<button class="btn accent" id="explainBtn">看讲解 📖</button>'}
+        <button class="btn" id="nextBtn">${isLast() ? '看结果 🏁' : '下一题 ▶'} <span style="font-size:13px;opacity:.8">(Enter)</span></button>`;
       $('#nextBtn', box).onclick = next;
       if (!correct) $('#explainBtn', box).onclick = () => showExplain(qv.explainKind, qv.n);
-      if ($('#ans', box)) $('#ans', box).blur();
-      onKey = e => { if (e.key === 'Enter' && state.phase === 'next' && !$('.overlay')) { e.preventDefault(); next(); } };
       // 延迟一拍再监听，避免刚才提交用的那个回车事件冒泡上来又触发“下一题”
-      setTimeout(() => { if (state.phase === 'next' && onKey) document.addEventListener('keydown', onKey); }, 50);
+      setTimeout(() => { if (state.phase === 'next') listen(e => { if (e.key === 'Enter' && state.phase === 'next' && !$('.overlay')) { e.preventDefault(); next(); } }); }, 50);
+    }
+    function bindNav() {
+      if (cfg.mode === 'gen') return;
+      $('#prevQ', box).onclick = () => jumpTo(state.i - 1);
+      $('#nextQ', box).onclick = () => jumpTo(state.i + 1);
+      $('#resultBtn', box).onclick = finish;
+      box.querySelectorAll('[data-jump]').forEach(b => b.onclick = () => jumpTo(parseInt(b.dataset.jump, 10)));
     }
 
-    // 点题号直接跳到那道题
     function jumpTo(j) {
       if (j === state.i || j < 0 || j >= questions.length) return;
-      if (onKey) document.removeEventListener('keydown', onKey); onKey = null;
-      if (onChoiceKey) document.removeEventListener('keydown', onChoiceKey); onChoiceKey = null;
       state.i = j; render();
-      const inp = $('#ans', box); if (inp) inp.focus({ preventScroll: true });
-    }
-    // 跳过：不算对也不算错，不进错题本，直接下一题
-    function skip() {
-      if (state.phase !== 'answer') return;
-      const q = current();
-      state.results[q.id] = 'skip';
-      state.phase = 'next';
-      next();
+      const inp = $('#ans', box); if (inp && !inp.disabled) inp.focus({ preventScroll: true });
     }
     function next() {
-      if (onKey) document.removeEventListener('keydown', onKey); onKey = null;
-      if (onChoiceKey) document.removeEventListener('keydown', onChoiceKey); onChoiceKey = null;
       if (cfg.mode === 'gen') { questions.push(nextGen()); state.i++; render(); return; }
-      if (state.i < questions.length - 1) { state.i++; render(); } else finish();
+      if (state.i < questions.length - 1) { state.i++; render(); const inp = $('#ans', box); if (inp && !inp.disabled) inp.focus({ preventScroll: true }); }
+      else finish();
     }
 
     function finish() {
-      const list = questions.map((q, j) => { const r = state.results[q.id]; const qv = questionView(q); return `<li><span class="${r === 'bad' ? 'bad' : (r === 'skip' || !r) ? 'skip' : 'ok'}">${r === 'ok' ? '✅' : r === 'fixed' ? '🟡' : r === 'skip' ? '⏭' : r === 'bad' ? '❌' : '⬜'}</span> 第 ${j + 1} 题 <b>${esc(qv.answerText)}</b>${r === 'skip' ? ' <span class="sub">跳过</span>' : !r ? ' <span class="sub">没做</span>' : ''}</li>`; }).join('');
-      const wrongQs = questions.filter(q => state.results[q.id] === 'bad');
+      unlisten();
       const n = questions.length;
-      const skipped = questions.filter(q => state.results[q.id] === 'skip' || !state.results[q.id]).length;
-      const answered = n - skipped;
-      const face = answered === 0 ? '⏭' : state.right === answered ? '🏆' : state.right >= answered * 0.7 ? '😊' : '💪';
+      let right = 0, wrong = 0, undone = 0;
+      const list = questions.map((q, j) => {
+        const r = statusOf(q), qv = questionView(q);
+        if (r === 'ok' || r === 'fixed') right++; else if (r === 'bad') wrong++; else undone++;
+        const icon = r === 'ok' ? '✅' : r === 'fixed' ? '🟡' : r === 'bad' ? '❌' : '⬜';
+        const yours = r === 'bad' ? ` <span class="sub">你的答案：${esc(answerOf(q) || '')}</span>` : !r ? ' <span class="sub">没做</span>' : '';
+        return `<li><button class="qdot ${r || ''}" data-jump="${j}" title="回到这题">${j + 1}</button> <span class="${r === 'bad' ? 'bad' : r ? 'ok' : 'skip'}">${icon}</span> <b>${esc(qv.answerText)}</b>${yours}</li>`;
+      }).join('');
+      const answered = right + wrong;
+      const face = answered === 0 ? '📝' : right === answered ? '🏆' : right >= answered * 0.7 ? '😊' : '💪';
+      const wrongQs = questions.filter(q => statusOf(q) === 'bad');
       const nextBtn = cfg.next ? `<a class="btn accent big" href="#/kp/${kp.id}/${cfg.next.id}">下一部分 (${cfg.next.id}) ▶</a>` : `<a class="btn accent big" href="#/kp/${kp.id}">完成这个知识点 🏁</a>`;
-      box.innerHTML = `<div class="card center"><div class="summary-big">${face}</div><h2>答对 ${state.right} / ${answered} 题${skipped ? `，跳过 ${skipped} 题` : ''}</h2>
-        <ul class="result-list" style="text-align:left;max-width:420px;margin:10px auto">${list}</ul>
+      box.innerHTML = `<div class="card center"><div class="summary-big">${face}</div>
+        <h2>答对 ${right} / ${answered} 题${undone ? `，还有 ${undone} 题没做` : ''}</h2>
+        <ul class="result-list" style="text-align:left;max-width:460px;margin:10px auto">${list}</ul>
         <div class="actions">${wrongQs.length ? '<button class="btn" id="redoWrong">再做一遍错题 🔁</button>' : ''}
-          ${cfg.mode === 'book' ? nextBtn : `<a class="btn" href="#/kp/${kp.id}">返回知识点</a>`}
-          </div></div>`;
-      if (answered && state.right === answered) confetti();
-      if (wrongQs.length) $('#redoWrong', box).onclick = () => { runSession(kp, box, Object.assign({}, cfg, { questions: wrongQs, noAutoFocus: false })); box.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
+          ${undone ? '<button class="btn secondary" id="backToQ">回去做题 ✏️</button>' : ''}
+          ${cfg.mode === 'book' ? nextBtn : `<a class="btn" href="#/kp/${kp.id}">返回知识点</a>`}</div></div>`;
+      if (answered && right === answered) confetti();
+      box.querySelectorAll('[data-jump]').forEach(b => b.onclick = () => { state.i = parseInt(b.dataset.jump, 10); render(); box.scrollIntoView({ behavior: 'smooth', block: 'start' }); });
+      if (wrongQs.length) $('#redoWrong', box).onclick = () => { runSession(kp, box, Object.assign({}, cfg, { questions: wrongQs, retry: true, noAutoFocus: false })); box.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
+      if (undone) $('#backToQ', box).onclick = () => { const k = questions.findIndex(q => !statusOf(q)); state.i = k < 0 ? 0 : k; render(); box.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
     }
     function finishGen() {
-      if (onKey) document.removeEventListener('keydown', onKey);
-      if (onChoiceKey) document.removeEventListener('keydown', onChoiceKey);
+      unlisten();
       box.innerHTML = `<div class="card center"><div class="summary-big">${state.right >= 10 ? '🏆' : '😊'}</div><h2>这次做了 ${state.done} 题，答对 ${state.right} 题，最长连对 ${state.best} 🔥</h2>
-        <div class="actions"><a class="btn" href="#/kp/${kp.id}/infinite">再来一轮</a><a class="btn secondary" href="#/kp/${kp.id}">返回知识点</a></div></div>`;
+        <div class="actions"><a class="btn secondary" href="#/kp/${kp.id}">返回知识点</a></div></div>`;
     }
     render();
   }

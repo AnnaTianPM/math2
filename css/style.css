@@ -149,7 +149,7 @@ h2 { font-size: 24px; margin: 0 0 12px; }
 @media (max-width: 700px) { .choices { grid-template-columns: 1fr; } }
 
 /* practice */
-.qhead { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.qhead { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; flex-wrap: wrap; gap: 8px; }
 .qprogress { display: flex; gap: 6px; flex-wrap: wrap; }
 .qdot { width: 26px; height: 26px; border-radius: 6px; background: #e6e6ee; font-size: 13px; display: inline-flex; align-items: center; justify-content: center; color: #888; font-weight: 700; border: none; cursor: pointer; padding: 0; transition: transform .1s; }
 .qdot:hover { transform: scale(1.2); outline: 2px solid var(--primary); }
@@ -157,8 +157,13 @@ h2 { font-size: 24px; margin: 0 0 12px; }
 .qdot.ok { background: var(--ok); color: #fff; }
 .qdot.bad { background: var(--bad); color: #fff; }
 .qdot.fixed { background: #ffd166; color: #fff; }
-.qdot.skip { background: #f0f0f4; color: #aaa; }
 .result-list .skip { color: #aaa; }
+.qnav { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.navbtn { width: 34px; height: 34px; border-radius: 10px; border: 2px solid var(--line); background: #fff; color: var(--primary-dark); font-size: 16px; cursor: pointer; font-weight: 700; }
+.navbtn:hover:not(:disabled) { border-color: var(--primary); }
+.navbtn:disabled { opacity: .35; cursor: default; }
+input.ans:disabled { background: #fafafa; }
+input.ans.shake:disabled { animation: none; border-color: var(--bad); background: #fff5f5; }
 .question { font-size: 26px; font-weight: 700; margin: 12px 0; }
 .question .en { display: block; font-size: 16px; }
 .qstage { display: flex; justify-content: center; align-items: center; min-height: 160px; margin: 8px 0; }
