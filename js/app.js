@@ -127,7 +127,12 @@
     }).join('');
     box.innerHTML = `
       <div class="card"><div class="sub">${esc(kp.intro.zh)}<br><span class="en">${esc(kp.intro.en)}</span></div></div>
-      ${cards}`;
+      ${cards}
+      <div class="center mt"><button class="btn secondary small" id="clearKP">重做整个知识点（清空 A/B/C 全部记录）🔁</button></div>`;
+    $('#clearKP', box).onclick = () => {
+      const ids = kp.sections.flatMap(sec => sec.questions.map(q => q.id));
+      if (confirm(`确定清空这个知识点全部 ${ids.length} 道题的记录吗？（错题本里的这些题也会移出）`)) { Store.clearMany(ids); updateWrongBadge(); renderOverview(kp, box); }
+    };
     box.querySelectorAll('[data-clear]').forEach(b => b.onclick = () => {
       const sec = kp.sections.find(x => x.id === b.dataset.clear);
       if (confirm(`确定清空第 ${sec.id} 部分的 ${sec.questions.length} 道题的记录吗？（错题本里的这些题也会移出）`)) {
@@ -478,8 +483,14 @@
         ${inputArea}
         <div class="feedback" id="fb"></div>
         <div class="actions" id="actions"></div>
-        <div class="center mt"><a class="btn secondary small" href="#/kp/${kp.id}" id="quit">${cfg.mode === 'gen' ? '结束练习' : '返回知识点'}</a></div>
+        <div class="toolbar">
+          ${cfg.mode === 'gen' ? '' : '<button class="btn secondary small" id="redoBtn" title="清掉这道题的记录，重新作答">重做这题 🔄</button>'}
+          ${book ? '<button class="btn secondary small" id="redoAll" title="清掉这部分全部记录，从第 1 题重新开始">重做这部分 🔁</button>' : ''}
+          <a class="btn secondary small" href="#/kp/${kp.id}" id="quit">${cfg.mode === 'gen' ? '结束练习' : '返回知识点'}</a>
+        </div>
       </div>`;
+      if ($('#redoBtn', box)) $('#redoBtn', box).onclick = () => redoCurrent(q);
+      if ($('#redoAll', box)) $('#redoAll', box).onclick = redoSection;
       $('#qSpeak', box).onclick = () => speak(qv.prompt.zh, qv.prompt.en + (q.type === 'words2num' ? '. ' + NumWords.toWords(q.n) : ''));
       if (cfg.mode === 'gen') $('#quit', box).onclick = e => { e.preventDefault(); finishGen(); };
       else {
@@ -523,10 +534,8 @@
       fb.innerHTML = status === 'ok' ? '✅ 这题做对了 <span class="en">Correct</span>'
         : status === 'fixed' ? '🟡 这题改对了 <span class="en">Fixed</span>'
         : `❌ 这题做错了，正确答案是：<b>${esc(qv.answerText)}</b><span class="en">The answer is ${esc(qv.answerText)}</span>`;
-      $('#actions', box).innerHTML = `<button class="btn secondary" id="redoBtn">重做这题 🔄</button>
-        ${status === 'bad' ? '<button class="btn accent" id="explainBtn">看讲解 📖</button>' : ''}
+      $('#actions', box).innerHTML = `${status === 'bad' ? '<button class="btn accent" id="explainBtn">看讲解 📖</button>' : ''}
         <button class="btn" id="nextBtn">${isLast() ? '看结果 🏁' : '下一题 ▶'} <span style="font-size:13px;opacity:.8">(Enter)</span></button>`;
-      $('#redoBtn', box).onclick = () => redoCurrent(q);
       if (status === 'bad') $('#explainBtn', box).onclick = () => showExplain(qv.explainKind, qv.n);
       $('#nextBtn', box).onclick = next;
       scrollToActions();
@@ -535,10 +544,18 @@
 
     // 清掉这道题的记录，重新作答
     function redoCurrent(q) {
+      const had = !!statusOf(q) || state.phase === 'next';
       delete state.results[q.id]; delete state.answers[q.id];
       if (book) { Store.clearProgress(q.id); updateWrongBadge(); }
       render();
-      const fb = $('#fb', box); if (fb) fb.innerHTML = '🔄 记录已清掉，重新做一次吧 <span class="en">Cleared, try again</span>';
+      const fb = $('#fb', box); if (fb) fb.innerHTML = had ? '🔄 记录已清掉，重新做一次吧 <span class="en">Cleared, try again</span>' : '';
+      const inp = $('#ans', box); if (inp) inp.focus({ preventScroll: true });
+    }
+    function redoSection() {
+      if (!confirm(`确定把这部分 ${questions.length} 道题的记录全部清掉，从第 1 题重新开始吗？`)) return;
+      state.results = {}; state.answers = {};
+      Store.clearMany(questions.map(q => q.id)); updateWrongBadge();
+      state.i = 0; render();
       const inp = $('#ans', box); if (inp) inp.focus({ preventScroll: true });
       box.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
@@ -598,11 +615,9 @@
       const inp = $('#ans', box); if (inp) { inp.disabled = true; inp.blur(); $('#submit', box).disabled = true; }
       // 题号颜色刷新
       const nav = $('.qnav', box); if (nav) { nav.outerHTML = navHTML(); bindNav(); }
-      $('#actions', box).innerHTML = `<button class="btn secondary" id="redoBtn" title="清掉这道题的记录，重新作答">重做这题 🔄</button>
-        ${correct ? '' : '<button class="btn accent" id="explainBtn">看讲解 📖</button>'}
+      $('#actions', box).innerHTML = `${correct ? '' : '<button class="btn accent" id="explainBtn">看讲解 📖</button>'}
         <button class="btn" id="nextBtn">${isLast() ? '看结果 🏁' : '下一题 ▶'} <span style="font-size:13px;opacity:.8">(Enter)</span></button>`;
       $('#nextBtn', box).onclick = next;
-      $('#redoBtn', box).onclick = () => redoCurrent(q);
       if (!correct) $('#explainBtn', box).onclick = () => showExplain(qv.explainKind, qv.n);
       scrollToActions();
       // 延迟一拍再监听，避免刚才提交用的那个回车事件冒泡上来又触发“下一题”

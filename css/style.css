@@ -158,6 +158,7 @@ h2 { font-size: 24px; margin: 0 0 12px; }
 .qdot.bad { background: var(--bad); color: #fff; }
 .qdot.fixed { background: #ffd166; color: #fff; }
 .result-list .skip { color: #aaa; }
+.toolbar { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 18px; padding-top: 14px; border-top: 1px dashed var(--line); }
 .qnav { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .navbtn { width: 34px; height: 34px; border-radius: 10px; border: 2px solid var(--line); background: #fff; color: var(--primary-dark); font-size: 16px; cursor: pointer; font-weight: 700; }
 .navbtn:hover:not(:disabled) { border-color: var(--primary); }
