@@ -1,4 +1,5 @@
 /* 课程数据：单元 -> 知识点 -> 例题 / 练习 / 出题器
+ * 每个知识点分成若干部分（A/B/C），每部分 = 一道例题 + 紧跟的练习题（和课本顺序一致）
  * 题型：
  *   blocks    看方块写数字        {h,t,o,answer}
  *   num2words 数字 -> 英文单词    {n}
@@ -35,15 +36,11 @@ window.MATH_DATA = { units: [] };
           zh: '一个数由“百、十、个”组成。先数有几个百，再数有几个十，最后数有几个一。',
           en: 'A number is made of hundreds, tens and ones. Count the hundreds, then the tens, then the ones.'
         },
-        examples: [
-          { id: 'u1-1-ex1', kind: 'blocks', n: 425, title: { zh: '看方块，写数字', en: 'Count the blocks, write the number' } },
-          { id: 'u1-1-ex2', kind: 'num2words', n: 378, title: { zh: '数字 → 英文单词', en: 'Number → words' } },
-          { id: 'u1-1-ex3', kind: 'words2num', n: 562, title: { zh: '英文单词 → 数字', en: 'Words → number' } },
-        ],
         sections: [
           {
             id: 'A', type: 'blocks',
             title: { zh: '数一数，写出正确的数', en: 'Count and write the correct numbers' },
+            example: { kind: 'blocks', n: 425, title: { zh: '看方块，写数字', en: 'Count the blocks, write the number' } },
             questions: [
               q3('u1-1-A1', 3, 8, 7), q3('u1-1-A2', 5, 3, 0), q3('u1-1-A3', 8, 0, 7), q3('u1-1-A4', 6, 6, 9),
               q3('u1-1-A5', 10, 0, 0), q3('u1-1-A6', 2, 9, 8), q3('u1-1-A7', 4, 1, 1), q3('u1-1-A8', 9, 9, 0),
@@ -53,11 +50,13 @@ window.MATH_DATA = { units: [] };
           {
             id: 'B', type: 'num2words',
             title: { zh: '用英文单词写出下面的数', en: 'Write the following numbers in words' },
+            example: { kind: 'num2words', n: 378, title: { zh: '数字 → 英文单词', en: 'Number → words' } },
             questions: [760, 378, 456, 202, 1000, 624, 871, 513, 935, 144].map((n, i) => ({ id: `u1-1-B${i + 1}`, type: 'num2words', n }))
           },
           {
             id: 'C', type: 'words2num',
             title: { zh: '把英文单词写成数字', en: 'Write the numbers on the lines provided' },
+            example: { kind: 'words2num', n: 562, title: { zh: '英文单词 → 数字', en: 'Words → number' } },
             questions: [562, 779, 110, 358, 907, 241, 699, 412, 527, 836].map((n, i) => ({ id: `u1-1-C${i + 1}`, type: 'words2num', n }))
           },
         ],

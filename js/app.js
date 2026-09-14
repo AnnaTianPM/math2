@@ -89,35 +89,66 @@
   }
 
   // ---------- 知识点页 ----------
-  function renderKP(kpId, mode, arg) {
+  // #/kp/u1-1            知识点总览（各部分列表）
+  // #/kp/u1-1/A          第 A 部分：例题 + 紧跟的练习
+  // #/kp/u1-1/infinite/x 无限练习
+  function renderKP(kpId, sub, arg) {
     setNav('');
     const found = findKP(kpId);
     if (!found || !found.kp.available) { app.innerHTML = '<div class="card">还没有这个知识点哦。<a href="#/">回首页</a></div>'; return; }
     const { unit, kp } = found;
-    mode = mode || 'learn';
-    const tab = (m, label) => `<a class="btn ${mode === m ? '' : 'inactive'}" href="#/kp/${kp.id}/${m}">${label}</a>`;
     app.innerHTML = `
-      <div class="crumb"><a href="#/">首页</a> › Unit ${unit.num} ${esc(unit.title.zh)}</div>
+      <div class="crumb"><a href="#/">首页</a> › Unit ${unit.num} ${esc(unit.title.zh)} ${sub && sub !== 'infinite' ? `› <a href="#/kp/${kp.id}">${esc(kp.title.zh)}</a> › 第 ${sub} 部分` : ''}</div>
       <h1>${esc(kp.title.zh)} <span class="en">${esc(kp.title.en)}</span></h1>
-      <div class="mode-tabs">${tab('learn', '📖 学一学 Learn')}${tab('practice', '✏️ 练一练 Practice')}${tab('infinite', '♾️ 无限练习 More')}</div>
       <div id="mode"></div>`;
     const box = $('#mode');
-    if (mode === 'learn') renderLearn(kp, box, arg);
-    else if (mode === 'practice') renderPracticeMenu(kp, box, arg);
-    else renderInfiniteMenu(kp, box, arg);
+    if (!sub) return renderOverview(kp, box);
+    if (sub === 'infinite') return renderInfiniteMenu(kp, box, arg);
+    const sec = kp.sections.find(x => x.id === sub);
+    if (!sec) return renderOverview(kp, box);
+    renderSection(kp, sec, box, arg === 'wrong');
   }
 
-  // ---------- 学一学：分步讲解 ----------
-  function renderLearn(kp, box, exIdx) {
-    exIdx = parseInt(exIdx || 0, 10);
-    const ex = kp.examples[exIdx];
-    const chips = kp.examples.map((e, i) => `<a class="chip ${i === exIdx ? 'active' : ''}" href="#/kp/${kp.id}/learn/${i}">例题 ${i + 1}：${esc(e.title.zh)}</a>`).join('');
+  // 总览：各部分（例题 + 练习）按顺序排列
+  function renderOverview(kp, box) {
+    const cards = kp.sections.map((s, i) => {
+      const st = sectionStats(s);
+      const started = st.ok + st.fixed + st.bad > 0;
+      const finished = started && st.ok + st.fixed + st.bad === st.total;
+      const wrongs = s.questions.filter(q => (Store.getProgress(q.id) || {}).status === 'bad').length;
+      return `<div class="card sec-card"><div class="row">
+        <span class="unit-num">${s.id}</span>
+        <div class="grow"><h2 style="margin:0">${esc(s.title.zh)} <span class="en">${esc(s.title.en)}</span></h2>
+          <div class="sub">📖 例题：${esc(s.example.title.zh)} ｜ ✏️ ${st.total} 题 ${started ? `｜ ✅ ${st.ok} 🟡 ${st.fixed} ❌ ${st.bad}` : ''}</div></div>
+        <a class="btn ${finished ? 'secondary' : ''}" href="#/kp/${kp.id}/${s.id}">${finished ? '再看一遍' : started ? '继续 ▶' : '开始 ▶'}</a>
+        ${wrongs ? `<a class="btn secondary" href="#/kp/${kp.id}/${s.id}/wrong">只做错题 (${wrongs})</a>` : ''}
+      </div></div>`;
+    }).join('');
     box.innerHTML = `
       <div class="card"><div class="sub">${esc(kp.intro.zh)}<br><span class="en">${esc(kp.intro.en)}</span></div></div>
-      <div class="example-nav">${chips}</div>
+      ${cards}
+      <div class="card"><div class="row"><span class="unit-num">♾️</span><div class="grow"><h2 style="margin:0">无限练习 <span class="en">More practice</span></h2><div class="sub">课本题做完了？随机出同类型的新题，想练多少练多少。</div></div>
+        <a class="btn accent" href="#/kp/${kp.id}/infinite">去练 ▶</a></div></div>`;
+  }
+
+  // 一个部分：先例题（分步讲解），下面紧跟练习
+  function renderSection(kp, sec, box, onlyWrong) {
+    const idx = kp.sections.indexOf(sec);
+    let questions = sec.questions;
+    if (onlyWrong) questions = sec.questions.filter(q => (Store.getProgress(q.id) || {}).status === 'bad');
+    if (!questions.length) questions = sec.questions;
+    box.innerHTML = `
+      <div class="sec-head"><span class="unit-num">${sec.id}</span><h2 style="margin:0">${esc(sec.title.zh)} <span class="en">${esc(sec.title.en)}</span></h2></div>
       <div class="card" id="stepper"></div>
-      <div class="center mt"><a class="btn accent big" href="#/kp/${kp.id}/practice">我学会了，去练一练 ✏️</a></div>`;
-    mountStepper($('#stepper'), buildSteps(ex.kind, ex.n), { title: `${esc(ex.title.zh)} <span class="en">${esc(ex.title.en)}</span>` });
+      <div class="center" style="margin:-6px 0 14px"><span class="sub">👆 先看例题，再做下面的练习 ｜ Example first, then practise below 👇</span></div>
+      <div id="practice"></div>`;
+    const practiceBox = $('#practice', box);
+    const scrollToPractice = () => { practiceBox.scrollIntoView({ behavior: 'smooth', block: 'start' }); const inp = $('#ans', practiceBox); if (inp) setTimeout(() => inp.focus({ preventScroll: true }), 400); };
+    mountStepper($('#stepper', box), buildSteps(sec.example.kind, sec.example.n), {
+      title: `📖 例题 Example：${esc(sec.example.title.zh)} <span class="en">${esc(sec.example.title.en)}</span>`,
+      doneLabel: '开始练习 ✏️', onDone: scrollToPractice,
+    });
+    runSession(kp, practiceBox, { mode: 'book', section: sec, questions, next: kp.sections[idx + 1] || null, noAutoFocus: true });
   }
 
   /* 分步讲解引擎：steps = [{zh, en, render(stage)}]，render 可返回一个 cleanup 函数 */
@@ -145,11 +176,11 @@
       cleanup = s.render(stage) || null;
       dots.innerHTML = steps.map((_, j) => `<span class="dot ${j <= i ? 'on' : ''}"></span>`).join('');
       $('#prev', el).disabled = i === 0;
-      $('#next', el).textContent = i === steps.length - 1 ? '完成 ✔' : '下一步 ▶';
+      $('#next', el).textContent = i === steps.length - 1 ? (opts.doneLabel || '完成 ✔') : '下一步 ▶';
       if (autoSpeak) speak(s.zh.replace(/<[^>]+>/g, ''), s.en.replace(/<[^>]+>/g, ''));
     }
     $('#prev', el).onclick = () => show(i - 1);
-    $('#next', el).onclick = () => { if (i === steps.length - 1) { if (opts.onClose) opts.onClose(); else show(0); } else show(i + 1); };
+    $('#next', el).onclick = () => { if (i === steps.length - 1) { if (opts.onClose) opts.onClose(); else if (opts.onDone) opts.onDone(); else show(0); } else show(i + 1); };
     $('#speakBtn', el).onclick = () => speak(steps[i].zh.replace(/<[^>]+>/g, ''), steps[i].en.replace(/<[^>]+>/g, ''));
     $('#autoSpeak', el).onchange = e => { autoSpeak = e.target.checked; localStorage.setItem('mathland.autoSpeak', autoSpeak ? '1' : '0'); if (!autoSpeak) speechSynthesis.cancel(); };
     if (opts.onClose) $('#closeBtn', el).onclick = opts.onClose;
@@ -321,27 +352,10 @@
     sec.questions.forEach(q => { const p = Store.getProgress(q.id); if (p) { if (p.status === 'ok') ok++; else if (p.status === 'fixed') fixed++; else bad++; } });
     return { ok, bad, fixed, total: sec.questions.length };
   }
-  function renderPracticeMenu(kp, box, secId) {
-    if (secId) { const sec = kp.sections.find(s => s.id === secId); if (sec) return runSession(kp, box, { mode: 'book', section: sec, questions: sec.questions }); }
-    box.innerHTML = kp.sections.map(s => {
-      const st = sectionStats(s);
-      const wrongs = s.questions.filter(q => (Store.getProgress(q.id) || {}).status === 'bad');
-      return `<div class="card"><div class="row"><div class="grow"><h2>(${s.id}) ${esc(s.title.zh)} <span class="en">${esc(s.title.en)}</span></h2>
-        <div class="sub">共 ${st.total} 题 ｜ ✅ ${st.ok} ｜ 🟡 改对 ${st.fixed} ｜ ❌ ${st.bad}</div></div>
-        <a class="btn" href="#/kp/${kp.id}/practice/${s.id}">${st.ok + st.fixed + st.bad ? '继续做' : '开始'} ▶</a>
-        ${wrongs.length ? `<button class="btn secondary" data-redo="${s.id}">只做错题 (${wrongs.length})</button>` : ''}</div></div>`;
-    }).join('');
-    box.querySelectorAll('[data-redo]').forEach(b => b.onclick = () => {
-      const sec = kp.sections.find(s => s.id === b.dataset.redo);
-      const qs = sec.questions.filter(q => (Store.getProgress(q.id) || {}).status === 'bad');
-      runSession(kp, box, { mode: 'book', section: sec, questions: qs });
-    });
-  }
-
   function renderInfiniteMenu(kp, box, type) {
     const types = { blocks: ['看方块写数字', 'Blocks → number'], num2words: ['数字 → 英文', 'Number → words'], words2num: ['英文 → 数字', 'Words → number'] };
     if (type && types[type]) return runSession(kp, box, { mode: 'gen', genType: type });
-    box.innerHTML = `<div class="card"><h2>想练哪一种？ <span class="en">Which type?</span></h2><p class="sub">题目是随机生成的，想做多少做多少。</p>
+    box.innerHTML = `<div class="card"><h2>♾️ 无限练习：想练哪一种？ <span class="en">Which type?</span></h2><p class="sub">题目是随机生成的，想做多少做多少。</p>
       <div class="row">${Object.entries(types).map(([k, [zh, en]]) => `<a class="btn" href="#/kp/${kp.id}/infinite/${k}">${zh} <span style="opacity:.8;font-size:14px">${en}</span></a>`).join('')}</div></div>`;
   }
 
@@ -393,7 +407,7 @@
       const total = cfg.mode === 'gen' ? null : questions.length;
       const dots = cfg.mode === 'gen' ? `<span class="streak">已做 ${state.done} 题 ｜ 答对 ${state.right} ｜ 连对 🔥 ${state.streak}（最高 ${state.best}）</span>`
         : `<div class="qprogress">${questions.map((qq, j) => { const r = state.results[qq.id]; return `<span class="qdot ${j === state.i ? 'cur' : ''} ${r || ''}">${j + 1}</span>`; }).join('')}</div>`;
-      const head = cfg.mode === 'gen' ? '♾️ 无限练习' : cfg.mode === 'redo' ? '📕 错题重做' : `(${cfg.section.id}) ${esc(cfg.section.title.zh)}`;
+      const head = cfg.mode === 'gen' ? '♾️ 无限练习' : cfg.mode === 'redo' ? '📕 错题重做' : `✏️ 练习 Practice`;
       box.innerHTML = `<div class="card">
         <div class="qhead"><h2>${head}</h2>${dots}</div>
         <div class="question">${total ? `第 ${state.i + 1} 题：` : ''}${qv.prompt.zh} <button class="speak" id="qSpeak">🔊</button><span class="en">${qv.prompt.en}</span></div>
@@ -403,10 +417,10 @@
           <button class="btn ok" id="submit">检查 ✔</button></div>
         <div class="feedback" id="fb"></div>
         <div class="actions" id="actions"></div>
-        <div class="center mt"><a class="btn secondary small" href="#/kp/${kp.id}/${cfg.mode === 'gen' ? 'infinite' : 'practice'}" id="quit">${cfg.mode === 'gen' ? '结束练习' : '返回'}</a></div>
+        <div class="center mt"><a class="btn secondary small" href="#/kp/${kp.id}${cfg.mode === 'gen' ? '/infinite' : ''}" id="quit">${cfg.mode === 'gen' ? '结束练习' : '返回知识点'}</a></div>
       </div>`;
       const inp = $('#ans', box);
-      inp.focus();
+      if (!cfg.noAutoFocus || state.i > 0) inp.focus({ preventScroll: true });
       state.phase = 'answer'; state.attempts = 0;
       $('#submit', box).onclick = submit;
       $('#qSpeak', box).onclick = () => speak(qv.prompt.zh, qv.prompt.en + (q.type === 'words2num' ? '. ' + NumWords.toWords(q.n) : ''));
@@ -486,18 +500,19 @@
       const wrongQs = questions.filter(q => state.results[q.id] === 'bad');
       const n = questions.length;
       const face = state.right === n ? '🏆' : state.right >= n * 0.7 ? '😊' : '💪';
+      const nextBtn = cfg.next ? `<a class="btn accent big" href="#/kp/${kp.id}/${cfg.next.id}">下一部分 (${cfg.next.id}) ▶</a>` : `<a class="btn accent big" href="#/kp/${kp.id}">完成这个知识点 🏁</a>`;
       box.innerHTML = `<div class="card center"><div class="summary-big">${face}</div><h2>答对 ${state.right} / ${n} 题</h2>
         <ul class="result-list" style="text-align:left;max-width:420px;margin:10px auto">${list}</ul>
-        <div class="actions">${wrongQs.length ? '<button class="btn accent" id="redoWrong">再做一遍错题 🔁</button>' : ''}
-          <a class="btn" href="#/kp/${kp.id}/practice">返回练习列表</a>
-          <a class="btn secondary" href="#/kp/${kp.id}/infinite">无限练习 ♾️</a></div></div>`;
+        <div class="actions">${wrongQs.length ? '<button class="btn" id="redoWrong">再做一遍错题 🔁</button>' : ''}
+          ${cfg.mode === 'book' ? nextBtn : `<a class="btn" href="#/kp/${kp.id}">返回知识点</a>`}
+          ${cfg.section ? `<a class="btn secondary" href="#/kp/${kp.id}/infinite/${cfg.section.type}">练更多同类题 ♾️</a>` : ''}</div></div>`;
       if (state.right === n) confetti();
-      if (wrongQs.length) $('#redoWrong', box).onclick = () => runSession(kp, box, { mode: cfg.mode === 'redo' ? 'redo' : 'book', section: cfg.section, questions: wrongQs });
+      if (wrongQs.length) $('#redoWrong', box).onclick = () => { runSession(kp, box, Object.assign({}, cfg, { questions: wrongQs, noAutoFocus: false })); box.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
     }
     function finishGen() {
       document.removeEventListener('keydown', onKey);
       box.innerHTML = `<div class="card center"><div class="summary-big">${state.right >= 10 ? '🏆' : '😊'}</div><h2>这次做了 ${state.done} 题，答对 ${state.right} 题，最长连对 ${state.best} 🔥</h2>
-        <div class="actions"><a class="btn" href="#/kp/${kp.id}/infinite">再来一轮</a><a class="btn secondary" href="#/kp/${kp.id}/practice">回到练习</a></div></div>`;
+        <div class="actions"><a class="btn" href="#/kp/${kp.id}/infinite">再来一轮</a><a class="btn secondary" href="#/kp/${kp.id}">返回知识点</a></div></div>`;
     }
     render();
   }
