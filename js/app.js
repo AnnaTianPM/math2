@@ -13,7 +13,7 @@
   const split = n => n === 1000 ? { h: 10, t: 0, o: 0 } : { h: Math.floor(n / 100), t: Math.floor(n / 10) % 10, o: n % 10 };
 
   // 朗读（浏览器自带，中文 + 英文）
-  let autoSpeak = localStorage.getItem('mathland.autoSpeak') !== '0';
+  let autoSpeak = localStorage.getItem('mathland.autoSpeak') === '1';   // 默认不自动朗读，手动勾选后记住
   function speak(zh, en) {
     if (!('speechSynthesis' in window)) return;
     speechSynthesis.cancel();
