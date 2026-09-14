@@ -3,6 +3,8 @@
   const $ = (sel, root = document) => root.querySelector(sel);
   const app = $('#app');
   const DATA = window.MATH_DATA;
+  // 给 types.js 用的工具（函数声明会提升，这里可以直接引用）
+  window.UI = { pvTable, bigNum, split: n => split(n), esc, wordChoices: q => wordChoices(q), cnt: (n, u) => cnt(n, u) };
 
   // ---------- 通用 ----------
   function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
@@ -215,6 +217,7 @@
 
   /* 根据题型和数字动态生成讲解步骤（例题和错题讲解共用） */
   function buildSteps(kind, n) {
+    if (window.StepKinds && window.StepKinds[kind]) return window.StepKinds[kind](n);
     const v = split(n);
     const zhWords = NumWords.toZh(n), enWords = NumWords.toWords(n);
     if (kind === 'blocks') return blocksSteps(n, v, zhWords, enWords);
@@ -394,12 +397,16 @@
 
   // 一句话说明这道题是什么（题号悬停、错题本用）
   function qLabel(q) {
+    if (q.label) return q.label;
+    if (q.type === 'fill') return q.text.replace(/\{\{\w+\}\}/g, '__').replace(/\n/g, ' ');
+    if (q.type === 'arrange') return `${q.nums.join(', ')} ${q.order === 'asc' ? '从小到大' : '从大到小'}`;
     if (q.type === 'blocks') return `看方块写数字（${q.h} 个百 ${q.t} 个十 ${q.o} 个一）`;
     if (q.type === 'num2words') return `${q.n} 用英文怎么说`;
     return `${NumWords.toWords(q.n)} 是多少`;
   }
 
   function questionView(q) {
+    if (window.QTypes && window.QTypes[q.type]) return window.QTypes[q.type](q);
     if (q.type === 'blocks') return {
       prompt: { zh: '这是多少？', en: 'What number is this?' },
       stage: `<div class="blocks">${Blocks.render(q, { scale: 1.5 })}</div>`,
@@ -455,6 +462,7 @@
     if (cfg.mode !== 'gen') { const k = questions.findIndex(q => !statusOf(q)); state.i = k < 0 ? 0 : k; }
 
     const current = () => questions[state.i];
+    let curQV = null;   // 当前题的视图（每次 render 只生成一次，保持题内状态）
     const isLast = () => cfg.mode !== 'gen' && state.i === questions.length - 1;
 
     function navHTML() {
@@ -468,9 +476,9 @@
 
     function render() {
       unlisten();
-      const q = current(), qv = questionView(q);
+      const q = current(), qv = curQV = questionView(q);
       const head = cfg.mode === 'gen' ? '♾️ 练习' : cfg.mode === 'redo' ? '📕 错题重做' : `✏️ 练习 Practice`;
-      const inputArea = qv.choices
+      const inputArea = qv.custom ? qv.custom.html() : qv.choices
         ? `<div class="choices" id="choices">${qv.choices.map((c, i) => `<button class="choice" data-val="${esc(c)}"><span class="key">${i + 1}</span>${esc(c)}</button>`).join('')}</div>
            <div class="center sub" id="choiceTip">点一个答案，或按键盘 1 2 3 4 ｜ Click an answer or press 1-4</div>`
         : `<div class="answer-row"><label>答案 Answer:</label>
@@ -516,6 +524,7 @@
         box.querySelectorAll('.choice').forEach(b => b.onclick = () => submit(b.dataset.val));
         listen(e => { const k = parseInt(e.key, 10); if (state.phase === 'answer' && k >= 1 && k <= qv.choices.length && !$('.overlay')) { const b = box.querySelectorAll('.choice')[k - 1]; if (b && !b.disabled) b.click(); } });
       }
+      if (qv.custom) qv.custom.bind(box, () => submit(qv.custom.value(box)));
     }
 
     // 已经做过：只读回看，可重做
@@ -530,13 +539,14 @@
         if (status === 'bad' && ans) markChoice(ans, 'wrong');
         const tip = $('#choiceTip', box); if (tip) tip.textContent = '';
       }
+      if (qv.custom) qv.custom.restore(box, ans, status);
       fb.className = 'feedback ' + (status === 'bad' ? 'bad' : 'ok');
       fb.innerHTML = status === 'ok' ? '✅ 这题做对了 <span class="en">Correct</span>'
         : status === 'fixed' ? '🟡 这题改对了 <span class="en">Fixed</span>'
         : `❌ 这题做错了，正确答案是：<b>${esc(qv.answerText)}</b><span class="en">The answer is ${esc(qv.answerText)}</span>`;
-      $('#actions', box).innerHTML = `${status === 'bad' ? '<button class="btn accent" id="explainBtn">看讲解 📖</button>' : ''}
+      $('#actions', box).innerHTML = `${status === 'bad' && qv.explainKind ? '<button class="btn accent" id="explainBtn">看讲解 📖</button>' : ''}
         <button class="btn" id="nextBtn">${isLast() ? '看结果 🏁' : '下一题 ▶'} <span style="font-size:13px;opacity:.8">(Enter)</span></button>`;
-      if (status === 'bad') $('#explainBtn', box).onclick = () => showExplain(qv.explainKind, qv.n);
+      if (status === 'bad' && qv.explainKind) $('#explainBtn', box).onclick = () => showExplain(qv.explainKind, qv.n);
       $('#nextBtn', box).onclick = next;
       scrollToActions();
       listen(e => { if (e.key === 'Enter' && state.phase === 'next' && !$('.overlay')) { e.preventDefault(); next(); } });
@@ -564,13 +574,14 @@
 
     function submit(chosen) {
       if (state.phase !== 'answer') return;
-      const q = current(), qv = questionView(q);
+      const q = current(), qv = curQV || questionView(q);
       const inp = $('#ans', box), fb = $('#fb', box);
-      const val = chosen !== undefined ? chosen : inp.value.trim();
-      if (!val) { if (inp) inp.focus(); return; }
+      const val = chosen !== undefined ? chosen : (inp ? inp.value.trim() : null);
+      if (val === null || val === '') { if (inp) inp.focus(); return; }
       if (qv.check(val)) {
         if (inp) inp.classList.add('good');
         if (qv.choices) { markChoice(val, 'right'); box.querySelectorAll('.choice').forEach(b => b.disabled = true); }
+        if (qv.custom) qv.custom.lock(box);
         const firstTry = state.attempts === 0;
         fb.className = 'feedback ok';
         fb.innerHTML = firstTry ? '🎉 太棒了！答对了！<span class="en">Excellent! Correct!</span>' : '👍 改对了！<span class="en">Good, you fixed it!</span>';
@@ -591,6 +602,7 @@
         state.attempts++;
         if (inp) { inp.classList.remove('shake'); void inp.offsetWidth; inp.classList.add('shake'); }
         if (qv.choices) markChoice(val, 'wrong');
+        if (qv.custom && state.attempts === 1) qv.custom.markWrong(box, val);
         fb.className = 'feedback bad';
         if (state.attempts === 1) {
           const d = qv.diagnose ? qv.diagnose(val) : null;
@@ -600,10 +612,11 @@
         } else {
           fb.innerHTML = `❌ 正确答案是：<b>${esc(qv.answerText)}</b><span class="en">The answer is ${esc(qv.answerText)}</span>`;
           if (qv.choices) { markChoice(qv.answerText, 'right'); box.querySelectorAll('.choice').forEach(b => b.disabled = true); }
+          if (qv.custom) qv.custom.showAnswer(box);
           state.done++; state.streak = 0;
           record(q, 'bad', val);
           if (cfg.mode === 'redo') Store.wrongFailed(q.id);
-          Store.addWrong(q, kp.id, val, qv.answerText);
+          Store.addWrong(q, kp.id, qv.answerDisplay ? qv.answerDisplay(val) : val, qv.answerText);
           updateWrongBadge();
           afterAnswer(q, qv, false);
         }
@@ -615,10 +628,10 @@
       const inp = $('#ans', box); if (inp) { inp.disabled = true; inp.blur(); $('#submit', box).disabled = true; }
       // 题号颜色刷新
       const nav = $('.qnav', box); if (nav) { nav.outerHTML = navHTML(); bindNav(); }
-      $('#actions', box).innerHTML = `${correct ? '' : '<button class="btn accent" id="explainBtn">看讲解 📖</button>'}
+      $('#actions', box).innerHTML = `${correct || !qv.explainKind ? '' : '<button class="btn accent" id="explainBtn">看讲解 📖</button>'}
         <button class="btn" id="nextBtn">${isLast() ? '看结果 🏁' : '下一题 ▶'} <span style="font-size:13px;opacity:.8">(Enter)</span></button>`;
       $('#nextBtn', box).onclick = next;
-      if (!correct) $('#explainBtn', box).onclick = () => showExplain(qv.explainKind, qv.n);
+      if (!correct && qv.explainKind) $('#explainBtn', box).onclick = () => showExplain(qv.explainKind, qv.n);
       scrollToActions();
       // 延迟一拍再监听，避免刚才提交用的那个回车事件冒泡上来又触发“下一题”
       setTimeout(() => { if (state.phase === 'next') listen(e => { if (e.key === 'Enter' && state.phase === 'next' && !$('.overlay')) { e.preventDefault(); next(); } }); }, 50);
@@ -655,7 +668,7 @@
         const r = statusOf(q), qv = questionView(q);
         if (r === 'ok' || r === 'fixed') right++; else if (r === 'bad') wrong++; else undone++;
         const icon = r === 'ok' ? '✅' : r === 'fixed' ? '🟡' : r === 'bad' ? '❌' : '⬜';
-        const yours = r === 'bad' ? ` <span class="sub">你的答案：${esc(answerOf(q) || '')}</span>` : !r ? ' <span class="sub">没做</span>' : '';
+        const yours = r === 'bad' ? ` <span class="sub">你的答案：${esc(qv.answerDisplay ? qv.answerDisplay(answerOf(q) || '') : (answerOf(q) || ''))}</span>` : !r ? ' <span class="sub">没做</span>' : '';
         return `<li><button class="qdot ${r || ''}" data-jump="${j}" title="回到这题">${j + 1}</button> <span class="${r === 'bad' ? 'bad' : r ? 'ok' : 'skip'}">${icon}</span> <b>${esc(qv.answerText)}</b>${yours}</li>`;
       }).join('');
       const answered = right + wrong;
@@ -705,8 +718,8 @@
       html += `<div class="card"><h2>${f ? esc(f.kp.title.zh) : kpId} <span class="en">${f ? esc(f.kp.title.en) : ''}</span></h2>`;
       html += ws.map(w => {
         const qv = questionView(w.q);
-        const stage = w.q.type === 'blocks' ? `<div class="blocks">${Blocks.render(w.q, { scale: 0.7 })}</div>` : w.q.type === 'num2words' ? `<b>${w.q.n}</b> → 英文` : `<b>${NumWords.toWords(w.q.n)}</b> → 数字`;
-        return `<div class="wrong-item"><div><div class="wrong-q"><span class="tag">${w.q.gen ? '随机题' : w.q.id.replace('u1-1-', '')}</span>${stage}</div>
+        const stage = w.q.type === 'blocks' ? `<div class="blocks">${Blocks.render(w.q, { scale: 0.7 })}</div>` : w.q.type === 'num2words' ? `<b>${w.q.n}</b> → 英文` : w.q.type === 'words2num' ? `<b>${NumWords.toWords(w.q.n)}</b> → 数字` : esc(qLabel(w.q));
+        return `<div class="wrong-item"><div><div class="wrong-q"><span class="tag">${w.q.gen ? '随机题' : w.q.id.split('-').slice(2).join('-')}</span>${stage}</div>
           <div class="wrong-meta">你的答案：<b class="bad">${esc(w.yourAnswer)}</b> ｜ 正确：<b class="ok">${esc(qv.answerText)}</b> ｜ 错了 ${w.times} 次 ｜ 还需答对 ${w.need} 次</div></div>
           <div><button class="btn small secondary" data-explain="${w.q.id}">看讲解</button> <button class="btn small secondary" data-del="${w.q.id}">移出</button></div></div>`;
       }).join('');
@@ -722,7 +735,7 @@
     };
     $('#clearAll').onclick = () => { if (confirm('确定清空错题本吗？')) { Store.clearWrong(); updateWrongBadge(); renderWrong(); } };
     app.querySelectorAll('[data-del]').forEach(b => b.onclick = () => { Store.removeWrong(b.dataset.del); updateWrongBadge(); renderWrong(); });
-    app.querySelectorAll('[data-explain]').forEach(b => b.onclick = () => { const w = list.find(x => x.q.id === b.dataset.explain); const qv = questionView(w.q); showExplain(qv.explainKind, qv.n); });
+    app.querySelectorAll('[data-explain]').forEach(b => b.onclick = () => { const w = list.find(x => x.q.id === b.dataset.explain); const qv = questionView(w.q); if (qv.explainKind) showExplain(qv.explainKind, qv.n); else alert('这道题没有分步讲解'); });
   }
 
   // ---------- 进度 ----------
