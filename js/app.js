@@ -353,13 +353,35 @@
     return { ok, bad, fixed, total: sec.questions.length };
   }
   function renderInfiniteMenu(kp, box, type) {
-    const types = { blocks: ['看方块写数字', 'Blocks → number'], num2words: ['数字 → 英文', 'Number → words'], words2num: ['英文 → 数字', 'Words → number'] };
+    const types = { blocks: ['看方块写数字', 'Blocks → number'], num2words: ['数字 → 英文（选择题）', 'Number → words'], words2num: ['英文 → 数字', 'Words → number'] };
     if (type && types[type]) return runSession(kp, box, { mode: 'gen', genType: type });
     box.innerHTML = `<div class="card"><h2>♾️ 无限练习：想练哪一种？ <span class="en">Which type?</span></h2><p class="sub">题目是随机生成的，想做多少做多少。</p>
       <div class="row">${Object.entries(types).map(([k, [zh, en]]) => `<a class="btn" href="#/kp/${kp.id}/infinite/${k}">${zh} <span style="opacity:.8;font-size:14px">${en}</span></a>`).join('')}</div></div>`;
   }
 
   // ---------- 题目展示与判分 ----------
+  // 固定种子的随机数，让同一道题每次的选项顺序一样
+  function seeded(seed) { let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+  // 数字→英文 的选择题选项：正确答案 + 3 个容易混淆的错误答案
+  function wordChoices(q) {
+    if (q.choices) return q.choices;
+    const n = q.n, rnd = seeded(n * 7919 + (q.id.length * 131));
+    const v = split(n);
+    const mk = (h, t, o) => h * 100 + t * 10 + o;
+    let cands = n === 1000 ? [100, 110, 900, 101] : [
+      mk(v.h, v.o, v.t), mk(v.t, v.h, v.o), mk(v.o, v.t, v.h),
+      mk(v.h, v.t, (v.o + 1) % 10), mk(v.h, (v.t + 1) % 10, v.o), mk((v.h % 9) + 1, v.t, v.o),
+      mk(v.h, v.t, (v.o + 9) % 10), mk(v.h, (v.t + 9) % 10, v.o),
+      v.t === 1 ? mk(v.h, v.o, 1) : mk(v.h, 1, v.o),   // 十几 和 几十 混淆
+    ];
+    cands = [...new Set(cands)].filter(x => x !== n && x >= 100 && x <= 1000);
+    for (let i = cands.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [cands[i], cands[j]] = [cands[j], cands[i]]; }
+    const list = [n, ...cands.slice(0, 3)].map(NumWords.toWords);
+    for (let i = list.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [list[i], list[j]] = [list[j], list[i]]; }
+    q.choices = list;
+    return list;
+  }
+
   function questionView(q) {
     if (q.type === 'blocks') return {
       prompt: { zh: '这是多少？', en: 'What number is this?' },
@@ -371,13 +393,13 @@
       explainKind: 'blocks', n: q.answer,
     };
     if (q.type === 'num2words') return {
-      prompt: { zh: '用英文单词写出这个数', en: 'Write this number in words' },
+      prompt: { zh: '这个数用英文怎么说？选一选', en: 'Which is this number in words?' },
       stage: bigNum(q.n),
-      inputType: 'text', label: '',
-      hint: { zh: `先写百位：${NumWords.parts(q.n).h || 'one thousand'}${q.n % 100 ? '，然后 and，再写后面的数。小横线别忘了（如 twenty-one）。' : '，后面是 0 就不用写了。'}`, en: 'Hundreds first, then "and", then the rest. Remember the hyphen (twenty-one).' },
+      inputType: 'choice', choices: wordChoices(q), label: '',
+      hint: { zh: `先看百位：${q.n === 1000 ? '1000 是 one thousand' : `${split(q.n).h} 是 ${NumWords.ones[split(q.n).h]}，所以开头是 ${NumWords.parts(q.n).h}`}${q.n % 100 ? '。再看后面的数是不是对的。' : '。后面是 0，后面什么都没有。'}`, en: 'Look at the hundreds first, then check the rest.' },
       answerText: NumWords.toWords(q.n),
       check: val => NumWords.wordsEqual(val, NumWords.toWords(q.n)),
-      diagnose: val => { const m = NumWords.fromWords(val); return (m !== null && m !== q.n) ? { zh: `你写的是 ${m}，题目是 ${q.n} 哦。`, en: `You wrote ${m}, but the number is ${q.n}.` } : { zh: '检查一下拼写～', en: 'Check your spelling.' }; },
+      diagnose: val => { const m = NumWords.fromWords(val); return (m !== null && m !== q.n) ? { zh: `你选的是 ${m}，题目是 ${q.n} 哦。`, en: `You chose ${m}, but the number is ${q.n}.` } : null; },
       explainKind: 'num2words', n: q.n,
     };
     return {
@@ -398,7 +420,7 @@
     const nextGen = () => kp.generate(cfg.genType, state.genSeq++);
     if (cfg.mode === 'gen') questions = [nextGen()];
     const bookLike = cfg.mode === 'book';
-    let onKey = null;
+    let onKey = null, onChoiceKey = null;
 
     function current() { return questions[state.i]; }
 
@@ -412,31 +434,41 @@
         <div class="qhead"><h2>${head}</h2>${dots}</div>
         <div class="question">${total ? `第 ${state.i + 1} 题：` : ''}${qv.prompt.zh} <button class="speak" id="qSpeak">🔊</button><span class="en">${qv.prompt.en}</span></div>
         <div class="qstage">${qv.stage}</div>
+        ${qv.choices ? `<div class="choices" id="choices">${qv.choices.map((c, i) => `<button class="choice" data-val="${esc(c)}"><span class="key">${i + 1}</span>${esc(c)}</button>`).join('')}</div>
+          <div class="center sub">点一个答案，或按键盘 1 2 3 4 ｜ Click an answer or press 1-4</div>` : `
         <div class="answer-row"><label>答案 Answer:</label>
-          <input class="ans ${qv.inputType === 'text' ? 'wide' : ''}" id="ans" type="${qv.inputType === 'number' ? 'text' : 'text'}" inputmode="${qv.inputType === 'number' ? 'numeric' : 'text'}" autocomplete="off" spellcheck="false" placeholder="${qv.inputType === 'number' ? '?' : 'type the words'}">
-          <button class="btn ok" id="submit">检查 ✔</button></div>
+          <input class="ans" id="ans" type="text" inputmode="numeric" autocomplete="off" spellcheck="false" placeholder="?">
+          <button class="btn ok" id="submit">检查 ✔</button></div>`}
         <div class="feedback" id="fb"></div>
         <div class="actions" id="actions"></div>
         <div class="center mt"><a class="btn secondary small" href="#/kp/${kp.id}${cfg.mode === 'gen' ? '/infinite' : ''}" id="quit">${cfg.mode === 'gen' ? '结束练习' : '返回知识点'}</a></div>
       </div>`;
       const inp = $('#ans', box);
-      if (!cfg.noAutoFocus || state.i > 0) inp.focus({ preventScroll: true });
+      if (inp && (!cfg.noAutoFocus || state.i > 0)) inp.focus({ preventScroll: true });
       state.phase = 'answer'; state.attempts = 0;
-      $('#submit', box).onclick = submit;
+      if (inp) $('#submit', box).onclick = () => submit();
+      if (qv.choices) {
+        box.querySelectorAll('.choice').forEach(b => b.onclick = () => submit(b.dataset.val));
+        if (onChoiceKey) document.removeEventListener('keydown', onChoiceKey);
+        onChoiceKey = e => { const k = parseInt(e.key, 10); if (state.phase === 'answer' && k >= 1 && k <= qv.choices.length && !$('.overlay')) { const b = box.querySelectorAll('.choice')[k - 1]; if (b && !b.disabled) b.click(); } };
+        document.addEventListener('keydown', onChoiceKey);
+      }
       $('#qSpeak', box).onclick = () => speak(qv.prompt.zh, qv.prompt.en + (q.type === 'words2num' ? '. ' + NumWords.toWords(q.n) : ''));
       if (cfg.mode === 'gen') $('#quit', box).onclick = e => { e.preventDefault(); finishGen(); };
-      window.addEventListener('hashchange', () => { if (onKey) document.removeEventListener('keydown', onKey); onKey = null; }, { once: true });
-      inp.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); submit(); } };
+      window.addEventListener('hashchange', () => { if (onKey) document.removeEventListener('keydown', onKey); onKey = null; if (onChoiceKey) document.removeEventListener('keydown', onChoiceKey); onChoiceKey = null; }, { once: true });
+      if (inp) inp.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); submit(); } };
     }
 
-    function submit() {
+    function markChoice(val, cls) { box.querySelectorAll('.choice').forEach(b => { if (b.dataset.val === val) { b.classList.add(cls); b.disabled = true; } }); }
+    function submit(chosen) {
       if (state.phase !== 'answer') return;
       const q = current(), qv = questionView(q);
       const inp = $('#ans', box), fb = $('#fb', box), actions = $('#actions', box);
-      const val = inp.value.trim();
-      if (!val) { inp.focus(); return; }
+      const val = chosen !== undefined ? chosen : inp.value.trim();
+      if (!val) { if (inp) inp.focus(); return; }
       if (qv.check(val)) {
-        inp.classList.add('good');
+        if (inp) inp.classList.add('good');
+        if (qv.choices) { markChoice(val, 'right'); box.querySelectorAll('.choice').forEach(b => b.disabled = true); }
         const firstTry = state.attempts === 0;
         fb.className = 'feedback ok';
         fb.innerHTML = firstTry ? '🎉 太棒了！答对了！<span class="en">Excellent! Correct!</span>' : '👍 改对了！<span class="en">Good, you fixed it!</span>';
@@ -455,16 +487,18 @@
         afterAnswer(actions, q, qv, true);
       } else {
         state.attempts++;
-        inp.classList.remove('shake'); void inp.offsetWidth; inp.classList.add('shake');
+        if (inp) { inp.classList.remove('shake'); void inp.offsetWidth; inp.classList.add('shake'); }
+        if (qv.choices) markChoice(val, 'wrong');
         if (state.attempts === 1) {
           fb.className = 'feedback bad';
           const d = qv.diagnose ? qv.diagnose(val) : null;
           fb.innerHTML = `🤔 再想一想 <span class="en">Try again</span><span class="hint">${d ? d.zh + ' ' : ''}提示：${qv.hint.zh}<br><span class="en">${(d ? d.en + ' ' : '') + qv.hint.en}</span></span>`;
-          inp.select();
+          if (inp) inp.select();
           if (autoSpeak) speak('再想一想。' + (d ? d.zh : '') + qv.hint.zh, '');
         } else {
           fb.className = 'feedback bad';
           fb.innerHTML = `❌ 正确答案是：<b>${esc(qv.answerText)}</b><span class="en">The answer is ${esc(qv.answerText)}</span>`;
+          if (qv.choices) { markChoice(qv.answerText, 'right'); box.querySelectorAll('.choice').forEach(b => b.disabled = true); }
           state.done++; state.streak = 0;
           state.results[q.id] = 'bad';
           if (bookLike) Store.setProgress(q.id, 'bad');
@@ -483,7 +517,7 @@
         <button class="btn" id="nextBtn">${isLast ? '看结果 🏁' : '下一题 ▶'} <span style="font-size:13px;opacity:.8">(Enter)</span></button>`;
       $('#nextBtn', box).onclick = next;
       if (!correct) $('#explainBtn', box).onclick = () => showExplain(qv.explainKind, qv.n);
-      $('#ans', box).blur();
+      if ($('#ans', box)) $('#ans', box).blur();
       onKey = e => { if (e.key === 'Enter' && state.phase === 'next' && !$('.overlay')) { e.preventDefault(); next(); } };
       // 延迟一拍再监听，避免刚才提交用的那个回车事件冒泡上来又触发“下一题”
       setTimeout(() => { if (state.phase === 'next' && onKey) document.addEventListener('keydown', onKey); }, 50);
@@ -491,6 +525,7 @@
 
     function next() {
       if (onKey) document.removeEventListener('keydown', onKey); onKey = null;
+      if (onChoiceKey) document.removeEventListener('keydown', onChoiceKey); onChoiceKey = null;
       if (cfg.mode === 'gen') { questions.push(nextGen()); state.i++; render(); return; }
       if (state.i < questions.length - 1) { state.i++; render(); } else finish();
     }
@@ -510,7 +545,8 @@
       if (wrongQs.length) $('#redoWrong', box).onclick = () => { runSession(kp, box, Object.assign({}, cfg, { questions: wrongQs, noAutoFocus: false })); box.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
     }
     function finishGen() {
-      document.removeEventListener('keydown', onKey);
+      if (onKey) document.removeEventListener('keydown', onKey);
+      if (onChoiceKey) document.removeEventListener('keydown', onChoiceKey);
       box.innerHTML = `<div class="card center"><div class="summary-big">${state.right >= 10 ? '🏆' : '😊'}</div><h2>这次做了 ${state.done} 题，答对 ${state.right} 题，最长连对 ${state.best} 🔥</h2>
         <div class="actions"><a class="btn" href="#/kp/${kp.id}/infinite">再来一轮</a><a class="btn secondary" href="#/kp/${kp.id}">返回知识点</a></div></div>`;
     }
@@ -543,7 +579,7 @@
         const qv = questionView(w.q);
         const stage = w.q.type === 'blocks' ? `<div class="blocks">${Blocks.render(w.q, { scale: 0.7 })}</div>` : w.q.type === 'num2words' ? `<b>${w.q.n}</b> → 英文` : `<b>${NumWords.toWords(w.q.n)}</b> → 数字`;
         return `<div class="wrong-item"><div><div class="wrong-q"><span class="tag">${w.q.gen ? '随机题' : w.q.id.replace('u1-1-', '')}</span>${stage}</div>
-          <div class="wrong-meta">你写的：<b class="bad">${esc(w.yourAnswer)}</b> ｜ 正确：<b class="ok">${esc(qv.answerText)}</b> ｜ 错了 ${w.times} 次 ｜ 还需答对 ${w.need} 次</div></div>
+          <div class="wrong-meta">你的答案：<b class="bad">${esc(w.yourAnswer)}</b> ｜ 正确：<b class="ok">${esc(qv.answerText)}</b> ｜ 错了 ${w.times} 次 ｜ 还需答对 ${w.need} 次</div></div>
           <div><button class="btn small secondary" data-explain="${w.q.id}">看讲解</button> <button class="btn small secondary" data-del="${w.q.id}">移出</button></div></div>`;
       }).join('');
       html += '</div>';
