@@ -152,7 +152,7 @@ window.StepKinds = window.StepKinds || {};
         let ctl;
         if (f.kind === 'choice' && !isChoiceLong(f)) ctl = `<span class="seg" data-key="${k}">${f.options.map(o => `<button type="button" class="segbtn" data-val="${esc(o)}">${esc(o)}</button>`).join('')}</span>`;
         else if (f.kind === 'choice') ctl = `<span class="seg-placeholder" data-key="${k}">?</span>`;
-        else ctl = `<input class="blank" data-key="${k}" type="text" inputmode="${f.kind === 'text' ? 'text' : 'numeric'}" autocomplete="off" spellcheck="false" maxlength="${f.kind === 'text' ? 40 : Math.max(String(f.a).length, 1)}" style="width:${f.kind === 'text' ? 12 : Math.max(String(f.a).length, 2) * 0.9 + 1.2}em">`;
+        else ctl = `<input class="blank" data-key="${k}" type="text" inputmode="${f.kind === 'text' ? 'text' : f.kind === 'money' ? 'decimal' : 'numeric'}" autocomplete="off" spellcheck="false" maxlength="${f.kind === 'text' ? 40 : f.kind === 'money' ? 8 : Math.max(String(f.a).length, 1)}" style="width:${f.kind === 'text' ? 12 : Math.max(String(f.a).length, 2) * 0.9 + 1.2}em">`;
         t = t.replace(`{{${k}}}`, ctl);
       });
       const longChoices = keys.filter(k => isChoiceLong(q.fields[k])).map(k => `<div class="choices small-choices" data-key="${k}">${q.fields[k].options.map((o, i) => `<button type="button" class="choice" data-val="${esc(o)}"><span class="key">${i + 1}</span>${esc(o)}</button>`).join('')}</div>`).join('');
@@ -162,7 +162,7 @@ window.StepKinds = window.StepKinds || {};
       const inputs = [...box.querySelectorAll('input.blank')];
       inputs.forEach((inp, i) => {
         inp.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); submit(); } };
-        inp.oninput = () => { if (inp.maxLength > 0 && inp.value.length >= inp.maxLength && inputs[i + 1]) inputs[i + 1].focus(); };
+        inp.oninput = () => { if (inp.inputMode === 'numeric' && inp.maxLength > 0 && inp.value.length >= inp.maxLength && inputs[i + 1]) inputs[i + 1].focus(); };
       });
       box.querySelectorAll('.segbtn, .small-choices .choice').forEach(b => b.onclick = () => {
         const group = b.parentElement;
@@ -184,7 +184,7 @@ window.StepKinds = window.StepKinds || {};
       }
       return JSON.stringify(v);
     }
-    const norm = (k, s) => q.fields[k].kind === 'text' ? String(s).toLowerCase().replace(/\s+/g, ' ').trim() : String(s).trim();
+    const norm = (k, s) => { const kind = q.fields[k].kind; if (kind === 'text') return String(s).toLowerCase().replace(/\s+/g, ' ').trim(); if (kind === 'money') { const f = parseFloat(String(s).replace(/[$,¢\s]/g, '')); return isNaN(f) ? String(s).trim() : f.toFixed(2); } return String(s).trim(); };
     // q.accept：多组可接受的答案 [{k:v,...}, ...]；判分时取匹配最多的一组
     const alts = q.accept ? q.accept : null;
     let target = null;
