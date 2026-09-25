@@ -62,23 +62,29 @@
   window.QTypes.bond = q => {
     const blanks = q.blank;
     const val = k => blanks.includes(k) ? { input: k } : q[k];
-    const html = () => `<div class="bondq">${q.pic || ''}<div class="center mt">${bond(val('w'), val('a'), val('b'))}</div>${q.text ? `<div class="fill">${q.text}</div>` : ''}<div class="center mt"><button class="btn ok" id="submit">检查 ✔</button></div></div>`;
+    const extra = q.fields ? Object.keys(q.fields) : [];
+    const textHTML = () => q.text ? `<div class="fill">${q.text.replace(/\{\{(\w+)\}\}/g, (_, k) => `<input class="blank bondin bondtx" data-key="${k}" type="text" inputmode="numeric" maxlength="2" autocomplete="off">`).replace(/\n/g, '<br>')}</div>` : '';
+    const html = () => `<div class="bondq">${q.pic || ''}<div class="center mt">${bond(val('w'), val('a'), val('b'))}</div>${textHTML()}<div class="center mt"><button class="btn ok" id="submit">检查 ✔</button></div></div>`;
+    const ansOf = k => extra.includes(k) ? q.fields[k].a : q[k];
     const inputs = box => [...box.querySelectorAll('input.bondin')];
     function bind(box, submit) { const ins = inputs(box); ins.forEach(i => { i.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); submit(); } }; }); box.querySelector('#submit').onclick = () => submit(); if (ins[0]) ins[0].focus({ preventScroll: true }); }
     const value = box => { const v = {}; let any = false; inputs(box).forEach(i => { const t = i.value.trim(); if (t) any = true; v[i.dataset.key] = t; }); return any ? JSON.stringify(v) : null; };
-    const okMap = v => { const m = {}; const swap = q.anyOrder !== false && blanks.includes('a') && blanks.includes('b') && String(v.a) === String(q.b) && String(v.b) === String(q.a) && v.a !== v.b; blanks.forEach(k => { m[k] = swap ? true : String(v[k]) === String(q[k]); }); return m; };
-    const check = s => { try { const m = okMap(JSON.parse(s)); return blanks.every(k => m[k]); } catch (e) { return false; } };
+    const okMap = v => { const m = {}; const swap = q.anyOrder !== false && blanks.includes('a') && blanks.includes('b') && String(v.a) === String(q.b) && String(v.b) === String(q.a) && v.a !== v.b; blanks.forEach(k => { m[k] = swap ? true : String(v[k]) === String(q[k]); });
+      if (extra.length) { const alts = q.accept || [Object.fromEntries(extra.map(k => [k, q.fields[k].a]))]; let best = null, bestN = -1; alts.forEach(alt => { const n = extra.filter(k => String(v[k]) === String(alt[k])).length; if (n > bestN) { bestN = n; best = alt; } }); extra.forEach(k => { m[k] = String(v[k]) === String(best[k]); }); }
+      return m; };
+    const allKeys = blanks.concat(extra);
+    const check = s => { try { const m = okMap(JSON.parse(s)); return allKeys.every(k => m[k]); } catch (e) { return false; } };
     function markWrong(box, s) { const v = JSON.parse(s), m = okMap(v); inputs(box).forEach(i => { const ok = m[i.dataset.key]; i.classList.toggle('good', ok); i.classList.toggle('badf', !ok); if (ok) i.disabled = true; }); }
     function lock(box) { inputs(box).forEach(i => i.disabled = true); box.querySelector('#submit').disabled = true; }
-    function showAnswer(box) { inputs(box).forEach(i => { i.value = q[i.dataset.key]; i.classList.remove('badf'); i.classList.add('good'); }); lock(box); }
+    function showAnswer(box) { inputs(box).forEach(i => { i.value = ansOf(i.dataset.key); i.classList.remove('badf'); i.classList.add('good'); }); lock(box); }
     function restore(box, s, status) { try { const v = JSON.parse(s || '{}'), m = okMap(v); inputs(box).forEach(i => { i.value = v[i.dataset.key] || ''; i.classList.add(m[i.dataset.key] ? 'good' : 'badf'); }); } catch (e) { /* */ } lock(box); }
-    const ansText = `${q.a} and ${q.b} make ${q.w}`;
+    const ansText = `${q.a} and ${q.b} make ${q.w}` + (extra.length ? '；' + extra.map(k => q.fields[k].a).join(', ') : '');
     return {
       prompt: q.prompt || { zh: '把数字组合填完整', en: 'Complete the number bond.' }, stage: '',
       custom: { html, bind, value, markWrong, showAnswer, lock, restore },
       hint: q.hint || { zh: '大圈是整体（一共），两个小圈是部分。两个部分合起来等于整体。', en: 'The two parts make the whole.' },
       answerText: ansText, check,
-      answerDisplay: s => { try { const v = JSON.parse(s); return ['w', 'a', 'b'].map(k => blanks.includes(k) ? (v[k] || '_') : q[k]).join(' / '); } catch (e) { return s; } },
+      answerDisplay: s => { try { const v = JSON.parse(s); return ['w', 'a', 'b'].map(k => blanks.includes(k) ? (v[k] || '_') : q[k]).join(' / ') + (extra.length ? '；' + extra.map(k => v[k] || '_').join(', ') : ''); } catch (e) { return s; } },
       explainKind: q.explain[0], n: q.explain[1],
     };
   };

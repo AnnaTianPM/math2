@@ -22,18 +22,28 @@
 
   // 朗读（浏览器自带，中文 + 英文）
   let autoSpeak = localStorage.getItem('mathland.autoSpeak') === '1';   // 默认不自动朗读，手动勾选后记住
-  function speak(zh, en) {
+  // 小喇叭是开关：读的时候变成 ⏹，再点就停；换页/换题/Esc 也会停
+  let speakBtnEl = null, speakQueue = 0;
+  function setSpeakIcon(on) { document.querySelectorAll('.speak').forEach(b => { b.textContent = on && b === speakBtnEl ? '⏹' : '🔊'; b.classList.toggle('speaking', on && b === speakBtnEl); }); }
+  function stopSpeak() { if ('speechSynthesis' in window) speechSynthesis.cancel(); speakQueue = 0; setSpeakIcon(false); speakBtnEl = null; }
+  function speak(zh, en, btn) {
     if (!('speechSynthesis' in window)) return;
-    speechSynthesis.cancel();
+    if (btn && btn === speakBtnEl && speechSynthesis.speaking) { stopSpeak(); return; }   // 再点一下：停
+    stopSpeak();
+    speakBtnEl = btn || null;
     const say = (text, lang, rate) => {
       if (!text) return;
       const u = new SpeechSynthesisUtterance(text.replace(/[→|]/g, ' '));
       u.lang = lang; u.rate = rate;
+      speakQueue++;
+      u.onend = u.onerror = () => { speakQueue--; if (speakQueue <= 0) { speakQueue = 0; setSpeakIcon(false); speakBtnEl = null; } };
       speechSynthesis.speak(u);
     };
     say(zh, 'zh-CN', 0.95);
     say(en, 'en-US', 0.85);
+    if (speakQueue > 0) setSpeakIcon(true);
   }
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') stopSpeak(); });
 
   function confetti() {
     const box = $('#confetti');
@@ -211,15 +221,15 @@
       dots.innerHTML = steps.map((_, j) => `<span class="dot ${j <= i ? 'on' : ''}"></span>`).join('');
       $('#prev', el).disabled = i === 0;
       $('#next', el).textContent = i === steps.length - 1 ? (opts.doneLabel || '完成 ✔') : '下一步 ▶';
-      if (autoSpeak) speak(s.zh.replace(/<[^>]+>/g, ''), s.en.replace(/<[^>]+>/g, ''));
+      if (autoSpeak) speak(s.zh.replace(/<[^>]+>/g, ''), s.en.replace(/<[^>]+>/g, ''), $('#speakBtn', el)); else stopSpeak();
     }
     $('#prev', el).onclick = () => show(i - 1);
     $('#next', el).onclick = () => { if (i === steps.length - 1) { if (opts.onClose) opts.onClose(); else if (opts.onDone) opts.onDone(); else show(0); } else show(i + 1); };
-    $('#speakBtn', el).onclick = () => speak(steps[i].zh.replace(/<[^>]+>/g, ''), steps[i].en.replace(/<[^>]+>/g, ''));
+    $('#speakBtn', el).onclick = e => speak(steps[i].zh.replace(/<[^>]+>/g, ''), steps[i].en.replace(/<[^>]+>/g, ''), e.currentTarget);
     $('#autoSpeak', el).onchange = e => { autoSpeak = e.target.checked; localStorage.setItem('mathland.autoSpeak', autoSpeak ? '1' : '0'); if (!autoSpeak) speechSynthesis.cancel(); };
     if (opts.onClose) $('#closeBtn', el).onclick = opts.onClose;
     show(0);
-    return { destroy() { if (cleanup) cleanup(); speechSynthesis.cancel(); } };
+    return { destroy() { if (cleanup) cleanup(); stopSpeak(); } };
   }
 
   // 位值表 HTML
@@ -497,6 +507,7 @@
     }
 
     function render() {
+      stopSpeak();
       unlisten();
       const q = current(), qv = curQV = questionView(q);
       const head = cfg.mode === 'gen' ? '♾️ 练习' : cfg.mode === 'redo' ? '📕 错题重做' : `✏️ 练习 Practice`;
@@ -521,7 +532,7 @@
       </div>`;
       if ($('#redoBtn', box)) $('#redoBtn', box).onclick = () => redoCurrent(q);
       if ($('#redoAll', box)) $('#redoAll', box).onclick = redoSection;
-      $('#qSpeak', box).onclick = () => speak(qv.prompt.zh, qv.prompt.en + (q.type === 'words2num' ? '. ' + NumWords.toWords(q.n) : ''));
+      $('#qSpeak', box).onclick = e => speak(qv.prompt.zh, qv.prompt.en + (q.type === 'words2num' ? '. ' + NumWords.toWords(q.n) : ''), e.currentTarget);
       if (cfg.mode === 'gen') $('#quit', box).onclick = e => { e.preventDefault(); finishGen(); };
       else {
         $('#prevQ', box).onclick = () => jumpTo(state.i - 1);
@@ -788,7 +799,7 @@
 
   // ---------- 路由 ----------
   function route() {
-    speechSynthesis && speechSynthesis.cancel();
+    stopSpeak();
     const parts = location.hash.replace(/^#\/?/, '').split('/').filter(Boolean);
     window.scrollTo(0, 0);
     if (!parts.length) return renderHome();
