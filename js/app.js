@@ -8,8 +8,14 @@
 
   // ---------- 通用 ----------
   function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+  // 年级：DATA.levels[n] = { num, units }；每个 unit / kp 标上 level
+  const LEVELS = [1, 2, 3, 4, 5];
+  LEVELS.forEach(n => { const lv = DATA.levels[n]; if (!lv) return; lv.units.forEach(u => { u.level = n; u.kps.forEach(k => { k.level = n; }); }); });
+  const levelReady = n => !!(DATA.levels[n] && DATA.levels[n].units.some(u => u.kps.length));
+  const kpHref = (kp, rest) => `#/L${kp.level}/kp/${kp.id}${rest || ''}`;
+  const lvHref = n => `#/L${n}`;
   function findKP(id) {
-    for (const u of DATA.units) for (const k of u.kps) if (k.id === id) return { unit: u, kp: k };
+    for (const n of LEVELS) { const lv = DATA.levels[n]; if (!lv) continue; for (const u of lv.units) for (const k of u.kps) if (k.id === id) return { level: n, unit: u, kp: k }; }
     return null;
   }
   const split = n => n === 1000 ? { h: 10, t: 0, o: 0 } : { h: Math.floor(n / 100), t: Math.floor(n / 10) % 10, o: n % 10 };
@@ -70,9 +76,25 @@
   function renderHome() {
     setNav('home');
     const st = Store.stats();
-    let html = `<h1>你好！今天想学什么？ <span class="en">What shall we learn today?</span></h1>
-      <p class="sub">已经拿到 ${st.stars} 颗星星 ⭐ ｜ 答对 ${st.correct} 题</p>`;
-    for (const u of DATA.units) {
+    const cards = LEVELS.map(n => {
+      const ok = levelReady(n);
+      const units = ok ? DATA.levels[n].units.filter(u => u.kps.length).length : 0;
+      return ok ? `<a class="level-card" href="${lvHref(n)}"><div class="level-num">${n}</div><div class="level-name">Level ${n}</div><div class="sub">${units} 个单元</div></a>`
+        : `<div class="level-card soon"><div class="level-num">${n}</div><div class="level-name">Level ${n}</div><span class="soon-tag">即将推出</span></div>`;
+    }).join('');
+    app.innerHTML = `<h1>你好！今天学哪一级？ <span class="en">Choose your level</span></h1>
+      <p class="sub">已经拿到 ${st.stars} 颗星星 ⭐ ｜ 答对 ${st.correct} 题</p>
+      <div class="level-grid">${cards}</div>`;
+  }
+  // 年级页：该年级的单元 + 知识点列表
+  function renderLevel(n) {
+    setNav('home');
+    if (!levelReady(n)) { app.innerHTML = `<div class="crumb"><a href="#/">首页</a> › Level ${n}</div><div class="card center"><h2>Level ${n} 即将推出</h2><a class="btn" href="#/">回首页</a></div>`; return; }
+    const st = Store.stats();
+    let html = `<div class="crumb"><a href="#/">首页</a> › Level ${n}</div>
+      <h1>Level ${n}：今天想学什么？ <span class="en">What shall we learn today?</span></h1>
+      <p class="sub">已经拿到 ${st.stars} 颗星星 ⭐ ｜ 答对 ${st.correct} 题 ｜ <a href="#/">换一个 Level</a></p>`;
+    for (const u of DATA.levels[n].units) {
       html += `<section class="unit"><div class="unit-head"><span class="unit-num">${u.num}</span><h2>${esc(u.title.zh)} <span class="en">${esc(u.title.en)}</span></h2></div>`;
       if (!u.kps.length) { html += `<div class="sub">即将推出 Coming soon</div></section>`; continue; }
       html += `<div class="kp-grid">`;
@@ -82,7 +104,7 @@
           continue;
         }
         const s = kpStars(k);
-        html += `<a class="kp-card" href="#/kp/${k.id}"><div class="kp-title">${esc(k.title.zh)}</div><div class="kp-en">${esc(k.title.en)}</div>
+        html += `<a class="kp-card" href="${kpHref(k)}"><div class="kp-title">${esc(k.title.zh)}</div><div class="kp-en">${esc(k.title.en)}</div>
           <div class="stars">${starsHTML(s.stars)} <span class="sub">${s.done}/${s.total} 题</span></div></a>`;
       }
       html += `</div></section>`;
@@ -100,7 +122,7 @@
     if (!found || !found.kp.available) { app.innerHTML = '<div class="card">还没有这个知识点哦。<a href="#/">回首页</a></div>'; return; }
     const { unit, kp } = found;
     app.innerHTML = `
-      <div class="crumb"><a href="#/">首页</a> › Unit ${unit.num} ${esc(unit.title.zh)} ${sub && sub !== 'infinite' ? `› <a href="#/kp/${kp.id}">${esc(kp.title.zh)}</a> › 第 ${sub} 部分` : ''}</div>
+      <div class="crumb"><a href="#/">首页</a> › <a href="${lvHref(kp.level)}">Level ${kp.level}</a> › Unit ${unit.num} ${esc(unit.title.zh)} ${sub && sub !== 'infinite' ? `› <a href="${kpHref(kp)}">${esc(kp.title.zh)}</a> › 第 ${sub} 部分` : ''}</div>
       <h1>${esc(kp.title.zh)} <span class="en">${esc(kp.title.en)}</span></h1>
       <div id="mode"></div>`;
     const box = $('#mode');
@@ -122,8 +144,8 @@
         <span class="unit-num">${s.id}</span>
         <div class="grow"><h2 style="margin:0">${esc(s.title.zh)} <span class="en">${esc(s.title.en)}</span></h2>
           <div class="sub">📖 例题：${esc(s.example.title.zh)} ｜ ✏️ ${st.total} 题 ${started ? `｜ ✅ ${st.ok} 🟡 ${st.fixed} ❌ ${st.bad}` : ''}</div></div>
-        <a class="btn ${finished ? 'secondary' : ''}" href="#/kp/${kp.id}/${s.id}">${finished ? '再看一遍' : started ? '继续 ▶' : '开始 ▶'}</a>
-        ${wrongs ? `<a class="btn secondary" href="#/kp/${kp.id}/${s.id}/wrong">只做错题 (${wrongs})</a>` : ''}
+        <a class="btn ${finished ? 'secondary' : ''}" href="${kpHref(kp, '/' + s.id)}">${finished ? '再看一遍' : started ? '继续 ▶' : '开始 ▶'}</a>
+        ${wrongs ? `<a class="btn secondary" href="${kpHref(kp, '/' + s.id + '/wrong')}">只做错题 (${wrongs})</a>` : ''}
         ${started ? `<button class="btn secondary small" data-clear="${s.id}" title="把这部分的记录全部清掉，重新开始">清空记录</button>` : ''}
       </div></div>`;
     }).join('');
@@ -369,7 +391,7 @@
     const types = { blocks: ['看方块写数字', 'Blocks → number'], num2words: ['数字 → 英文（选择题）', 'Number → words'], words2num: ['英文 → 数字', 'Words → number'] };
     if (type && types[type]) return runSession(kp, box, { mode: 'gen', genType: type });
     box.innerHTML = `<div class="card"><h2>♾️ 无限练习：想练哪一种？ <span class="en">Which type?</span></h2><p class="sub">题目是随机生成的，想做多少做多少。</p>
-      <div class="row">${Object.entries(types).map(([k, [zh, en]]) => `<a class="btn" href="#/kp/${kp.id}/infinite/${k}">${zh} <span style="opacity:.8;font-size:14px">${en}</span></a>`).join('')}</div></div>`;
+      <div class="row">${Object.entries(types).map(([k, [zh, en]]) => `<a class="btn" href="${kpHref(kp, '/infinite/' + k)}">${zh} <span style="opacity:.8;font-size:14px">${en}</span></a>`).join('')}</div></div>`;
   }
 
   // ---------- 题目展示与判分 ----------
@@ -494,7 +516,7 @@
         <div class="toolbar">
           ${cfg.mode === 'gen' ? '' : '<button class="btn secondary small" id="redoBtn" title="清掉这道题的记录，重新作答">重做这题 🔄</button>'}
           ${book ? '<button class="btn secondary small" id="redoAll" title="清掉这部分全部记录，从第 1 题重新开始">重做这部分 🔁</button>' : ''}
-          <a class="btn secondary small" href="#/kp/${kp.id}" id="quit">${cfg.mode === 'gen' ? '结束练习' : '返回知识点'}</a>
+          <a class="btn secondary small" href="${kpHref(kp)}" id="quit">${cfg.mode === 'gen' ? '结束练习' : '返回知识点'}</a>
         </div>
       </div>`;
       if ($('#redoBtn', box)) $('#redoBtn', box).onclick = () => redoCurrent(q);
@@ -674,13 +696,13 @@
       const answered = right + wrong;
       const face = answered === 0 ? '📝' : right === answered ? '🏆' : right >= answered * 0.7 ? '😊' : '💪';
       const wrongQs = questions.filter(q => statusOf(q) === 'bad');
-      const nextBtn = cfg.next ? `<a class="btn accent big" href="#/kp/${kp.id}/${cfg.next.id}">下一部分 (${cfg.next.id}) ▶</a>` : `<a class="btn accent big" href="#/kp/${kp.id}">完成这个知识点 🏁</a>`;
+      const nextBtn = cfg.next ? `<a class="btn accent big" href="${kpHref(kp, '/' + cfg.next.id)}">下一部分 (${cfg.next.id}) ▶</a>` : `<a class="btn accent big" href="${kpHref(kp)}">完成这个知识点 🏁</a>`;
       box.innerHTML = `<div class="card center"><div class="summary-big">${face}</div>
         <h2>答对 ${right} / ${answered} 题${undone ? `，还有 ${undone} 题没做` : ''}</h2>
         <ul class="result-list" style="text-align:left;max-width:460px;margin:10px auto">${list}</ul>
         <div class="actions">${wrongQs.length ? '<button class="btn" id="redoWrong">再做一遍错题 🔁</button>' : ''}
           ${undone ? '<button class="btn secondary" id="backToQ">回去做题 ✏️</button>' : ''}
-          ${cfg.mode === 'book' ? nextBtn : `<a class="btn" href="#/kp/${kp.id}">返回知识点</a>`}</div></div>`;
+          ${cfg.mode === 'book' ? nextBtn : `<a class="btn" href="${kpHref(kp)}">返回知识点</a>`}</div></div>`;
       if (answered && right === answered) confetti();
       box.querySelectorAll('[data-jump]').forEach(b => b.onclick = () => { state.i = parseInt(b.dataset.jump, 10); render(); box.scrollIntoView({ behavior: 'smooth', block: 'start' }); });
       if (wrongQs.length) $('#redoWrong', box).onclick = () => { runSession(kp, box, Object.assign({}, cfg, { questions: wrongQs, retry: true, noAutoFocus: false })); box.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
@@ -689,7 +711,7 @@
     function finishGen() {
       unlisten();
       box.innerHTML = `<div class="card center"><div class="summary-big">${state.right >= 10 ? '🏆' : '😊'}</div><h2>这次做了 ${state.done} 题，答对 ${state.right} 题，最长连对 ${state.best} 🔥</h2>
-        <div class="actions"><a class="btn secondary" href="#/kp/${kp.id}">返回知识点</a></div></div>`;
+        <div class="actions"><a class="btn secondary" href="${kpHref(kp)}">返回知识点</a></div></div>`;
     }
     render();
   }
@@ -709,13 +731,19 @@
     setNav('wrong');
     const list = Store.wrongList();
     if (!list.length) { app.innerHTML = `<h1>📕 错题本 <span class="en">Mistakes</span></h1><div class="card center"><div class="summary-big">🌈</div><h2>错题本是空的，真棒！</h2><a class="btn" href="#/">去练习</a></div>`; return; }
+    const lvOf = w => { const f = findKP(w.kp); return f ? f.level : 2; };
+    const lvCounts = {}; list.forEach(w => { const n = lvOf(w); lvCounts[n] = (lvCounts[n] || 0) + 1; });
+    const lvKeys = Object.keys(lvCounts).map(Number).sort();
+    const filter = renderWrong.filter && lvCounts[renderWrong.filter] ? renderWrong.filter : 0;
+    const shown = filter ? list.filter(w => lvOf(w) === filter) : list;
     const byKP = {};
-    list.forEach(w => { (byKP[w.kp] = byKP[w.kp] || []).push(w); });
+    shown.forEach(w => { (byKP[w.kp] = byKP[w.kp] || []).push(w); });
     let html = `<h1>📕 错题本 <span class="en">Mistakes</span></h1><p class="sub">共 ${list.length} 题。重做时连续答对 2 次，题目会自动移出。</p>
+      ${lvKeys.length > 1 ? `<div class="row" style="margin-bottom:10px"><button class="btn small ${filter ? 'secondary' : ''}" data-lv="0">全部 (${list.length})</button>${lvKeys.map(n => `<button class="btn small ${filter === n ? '' : 'secondary'}" data-lv="${n}">Level ${n} (${lvCounts[n]})</button>`).join('')}</div>` : ''}
       <div class="row" style="margin-bottom:14px"><button class="btn accent big" id="redoAll">重做全部错题 🔁</button><button class="btn secondary small" id="clearAll">清空错题本</button></div>`;
     for (const [kpId, ws] of Object.entries(byKP)) {
       const f = findKP(kpId);
-      html += `<div class="card"><h2>${f ? esc(f.kp.title.zh) : kpId} <span class="en">${f ? esc(f.kp.title.en) : ''}</span></h2>`;
+      html += `<div class="card"><h2><span class="tag">Level ${f ? f.level : '?'}</span> ${f ? esc(f.kp.title.zh) : kpId} <span class="en">${f ? esc(f.kp.title.en) : ''}</span></h2>`;
       html += ws.map(w => {
         const qv = questionView(w.q);
         const stage = w.q.type === 'blocks' ? `<div class="blocks">${Blocks.render(w.q, { scale: 0.7 })}</div>` : w.q.type === 'num2words' ? `<b>${w.q.n}</b> → 英文` : w.q.type === 'words2num' ? `<b>${NumWords.toWords(w.q.n)}</b> → 数字` : esc(qLabel(w.q));
@@ -726,12 +754,13 @@
       html += '</div>';
     }
     app.innerHTML = html;
+    app.querySelectorAll('[data-lv]').forEach(b => b.onclick = () => { renderWrong.filter = +b.dataset.lv; renderWrong(); });
     $('#redoAll').onclick = () => {
       // 按知识点分组重做（当前只有一个知识点，取第一组）
       const kpId = Object.keys(byKP)[0];
       const f = findKP(kpId);
       app.innerHTML = `<h1>📕 错题重做</h1><div id="redoBox"></div>`;
-      runSession(f.kp, $('#redoBox'), { mode: 'redo', questions: list.filter(w => w.kp === kpId).map(w => w.q) });
+      runSession(f.kp, $('#redoBox'), { mode: 'redo', questions: shown.filter(w => w.kp === kpId).map(w => w.q) });
     };
     $('#clearAll').onclick = () => { if (confirm('确定清空错题本吗？')) { Store.clearWrong(); updateWrongBadge(); renderWrong(); } };
     app.querySelectorAll('[data-del]').forEach(b => b.onclick = () => { Store.removeWrong(b.dataset.del); updateWrongBadge(); renderWrong(); });
@@ -743,10 +772,11 @@
     setNav('stats');
     const st = Store.stats();
     let rows = '';
-    for (const u of DATA.units) for (const k of u.kps) if (k.available) {
-      const s = kpStars(k);
-      rows += `<div class="wrong-item"><div><div class="wrong-q">Unit ${u.num} · ${esc(k.title.zh)}</div><div class="wrong-meta">完成 ${s.done}/${s.total} ｜ 答对 ${s.right}</div></div><div class="stars">${starsHTML(s.stars)}</div></div>`;
-    }
+    for (const n of LEVELS) { if (!levelReady(n)) continue; rows += `<h3 class="lv-head">Level ${n}</h3>`;
+      for (const u of DATA.levels[n].units) for (const k of u.kps) if (k.available) {
+        const s = kpStars(k);
+        rows += `<div class="wrong-item"><div><div class="wrong-q"><a href="${kpHref(k)}">Unit ${u.num} · ${esc(k.title.zh)}</a></div><div class="wrong-meta">完成 ${s.done}/${s.total} ｜ 答对 ${s.right}</div></div><div class="stars">${starsHTML(s.stars)}</div></div>`;
+      } }
     app.innerHTML = `<h1>⭐ 我的进度 <span class="en">My progress</span></h1>
       <div class="card"><h2>星星 ${st.stars} ⭐ ｜ 答对 ${st.correct} 题 ｜ 错题 ${st.wrong} 次</h2>${rows}</div>
       <div class="card"><h2>备份 <span class="en">Backup</span></h2><p class="sub">进度保存在这台电脑的浏览器里。换电脑或换浏览器前，先导出备份。</p>
@@ -762,7 +792,9 @@
     const parts = location.hash.replace(/^#\/?/, '').split('/').filter(Boolean);
     window.scrollTo(0, 0);
     if (!parts.length) return renderHome();
-    if (parts[0] === 'kp') return renderKP(parts[1], parts[2], parts[3]);
+    if (parts[0] === 'kp') { location.replace('#/L2/' + parts.join('/')); return; }   // 旧链接 → Level 2
+    const lm = /^L(\d)$/.exec(parts[0]);
+    if (lm) { const n = +lm[1]; if (parts[1] === 'kp') return renderKP(parts[2], parts[3], parts[4]); return renderLevel(n); }
     if (parts[0] === 'wrong') return renderWrong();
     if (parts[0] === 'stats') return renderStats();
     renderHome();

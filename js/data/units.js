@@ -5,7 +5,9 @@
  *   num2words 数字 -> 英文单词    {n}
  *   words2num 英文单词 -> 数字    {n}
  */
-window.MATH_DATA = { units: [] };
+window.MATH_DATA = { levels: {} };
+[1, 2, 3, 4, 5].forEach(n => { window.MATH_DATA.levels[n] = { num: n, units: [] }; });
+window.MATH_DATA.units = window.MATH_DATA.levels[2].units;   // Level 2（本文件及 unit*.js 都写进这里）
 
 (function () {
   const U = window.MATH_DATA.units;

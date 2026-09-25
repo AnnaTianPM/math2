@@ -493,3 +493,14 @@ input.carry-in:focus { border-color: var(--bad); }
 .vol-name { font-weight: 800; font-size: 18px; min-width: 70px; }
 .vol-emoji { font-size: 56px; }
 .paint svg text { font-size: 12px; }
+
+/* ---- 年级选择 ---- */
+.level-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 18px; margin-top: 18px; }
+.level-card { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 26px 16px 22px; background: #fff; border-radius: 18px; border: 3px solid transparent; box-shadow: 0 4px 14px rgba(0,0,0,.06); text-decoration: none; color: var(--ink); transition: transform .15s, border-color .15s; position: relative; }
+.level-card:hover { transform: translateY(-4px); border-color: var(--primary); }
+.level-card.soon { opacity: .5; }
+.level-card.soon:hover { transform: none; border-color: transparent; }
+.level-num { width: 74px; height: 74px; border-radius: 50%; background: var(--primary); color: #fff; font-size: 40px; font-weight: 900; display: flex; align-items: center; justify-content: center; }
+.level-card.soon .level-num { background: #b8b8c8; }
+.level-name { font-size: 22px; font-weight: 800; letter-spacing: .5px; }
+.lv-head { margin: 18px 0 6px; font-size: 18px; color: var(--primary); }
