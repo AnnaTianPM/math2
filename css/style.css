@@ -475,3 +475,21 @@ input.carry-in:focus { border-color: var(--bad); }
 .pgmake .pg { margin-top: 8px; }
 @keyframes pop { from { transform: scale(.4); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 @media (max-width: 700px) { .pg-row .pg-cells { white-space: normal; min-width: 0; } .pg-col { min-width: 64px; } .pg-sym { font-size: 22px; } }
+
+/* ---- 容量（Unit 17） ---- */
+.vessel { display: inline-block; vertical-align: bottom; border-radius: 10px; padding: 4px; transition: background .15s; }
+.vessel.hl { background: #fff3d6; outline: 3px solid var(--accent); }
+.vessel svg { display: block; }
+.vol-row { align-items: flex-end; }
+.vol-arrow { font-size: 30px; color: #7a7a8c; margin: 0 6px; }
+.cups { display: inline-flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.cup { display: inline-block; border-radius: 6px; padding: 1px; }
+.cup.hl { background: #fff3d6; }
+.cup.dim { opacity: .3; }
+.cups-cnt { margin-left: 10px; font-size: 20px; color: var(--primary); }
+.vol-list { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; margin: 0 auto; width: max-content; max-width: 100%; }
+.vol-item { display: flex; align-items: center; gap: 8px; padding: 4px 10px; border-radius: 12px; border: 2px solid transparent; }
+.vol-item.hl { background: #fff3d6; border-color: var(--accent); }
+.vol-name { font-weight: 800; font-size: 18px; min-width: 70px; }
+.vol-emoji { font-size: 56px; }
+.paint svg text { font-size: 12px; }
