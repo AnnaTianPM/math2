@@ -574,3 +574,25 @@ input.carry-in:focus { border-color: var(--bad); }
 .grp-cnt { font-size: 22px; color: var(--primary); margin-left: 4px; }
 .shp-glyph { font-size: 38px; color: #8a8a99; line-height: 1; } .shp-glyph.hollow { color: var(--ink); }
 .bondq .fill { margin-top: 6px; }
+/* 往后数 */
+.counton { display: inline-flex; align-items: flex-end; gap: 6px; flex-wrap: wrap; justify-content: center; }
+.co-grp { display: inline-flex; align-items: flex-end; gap: 4px; padding: 6px 8px; border-radius: 12px; }
+.co-grp.on { background: #fff8ea; }
+.co-item { display: inline-flex; flex-direction: column; align-items: center; width: 44px; }
+.co-top { height: 26px; font-size: 18px; font-weight: 900; color: var(--accent); display: flex; align-items: center; gap: 2px; }
+.co-ico { font-size: 34px; line-height: 1.1; }
+.co-bot { font-size: 13px; color: #999; }
+.co-item.hl .co-ico { transform: scale(1.15); filter: drop-shadow(0 0 5px rgba(255,159,67,.9)); }
+.co-start { font-size: 22px; font-weight: 900; color: var(--primary); margin: 0 4px 22px; }
+.co-arrow { display: inline-block; width: 14px; height: 10px; border-top: 3px solid var(--accent); border-right: 3px solid var(--accent); transform: rotate(45deg) translateY(4px); margin-right: 2px; }
+.hops { display: inline-flex; align-items: flex-end; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.hop { display: inline-flex; flex-direction: column; align-items: center; font-size: 26px; font-weight: 900; color: #bbb; min-width: 34px; }
+.hop.start { color: var(--primary); } .hop.on { color: var(--ink); }
+.hop .co-arrow { margin-bottom: 4px; }
+.eqline { display: inline-flex; align-items: center; gap: 10px; font-size: 30px; font-weight: 900; color: var(--ink); }
+.eq-c, .eq-t, .eq-s { display: inline-flex; align-items: center; justify-content: center; width: 54px; height: 54px; border: 3px solid var(--accent); background: #fff; }
+.eq-c { border-radius: 50%; } .eq-t { clip-path: polygon(50% 0, 100% 100%, 0 100%); background: #ffe9c9; border: none; padding-top: 14px; } .eq-s { border-radius: 6px; }
+.eq-c.hl, .eq-s.hl { background: #fff3d6; box-shadow: 0 0 0 4px rgba(255,159,67,.3); }
+.sum-opt { display: inline-flex; align-items: center; gap: 8px; padding: 6px 16px; border: 2px solid var(--ink); border-radius: 6px; font-size: 24px; font-weight: 800; background: #fff; }
+.sum-opt.right { background: #9be3b7; } .sum-opt.wrong { background: #eee; color: #999; }
+.pick-opts .choice .sum-opt { border: none; background: none; padding: 0; }
