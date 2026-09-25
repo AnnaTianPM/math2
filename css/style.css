@@ -393,3 +393,28 @@ input.carry-in:focus { border-color: var(--bad); }
 .gc.live .gc-dot:hover { r: 10; }
 .gc.live .gc-dot.start { fill: var(--accent); stroke: var(--accent); }
 .gc.bad { border-color: var(--bad); animation: shake .4s; }
+
+/* ---- 分数（Unit 14） ---- */
+.fracin { display: inline-flex; flex-direction: column; align-items: center; vertical-align: middle; margin: 0 6px; line-height: 1; }
+.fracin input.blank { width: 2.2em !important; font-size: 20px; padding: 2px 4px; margin: 0; border-radius: 6px; border-bottom-width: 2px; text-align: center; }
+.fracin .fbar { width: 2.6em; height: 3px; background: var(--ink); margin: 3px 0; border-radius: 2px; }
+.frac { display: inline-flex; flex-direction: column; align-items: center; vertical-align: middle; margin: 0 4px; line-height: 1.05; font-weight: 800; }
+.frac .n { padding: 0 4px; } .frac .d { padding: 0 4px; border-top: 2.5px solid currentColor; }
+.frac.big { font-size: 34px; } .frac.big .d { border-top-width: 3px; }
+.fig svg { max-width: 100%; height: auto; }
+.fig .piece { transition: fill .15s; }
+.fig.live .piece { cursor: pointer; }
+.fig.live .piece:hover { fill: #e0d8ff; }
+.fig .piece.on { fill: #9d8fee; }
+.fig .piece.right { fill: #9be3b7; } .fig .piece.wrong { fill: #ffb3b3; }
+.fig-row { display: flex; flex-wrap: wrap; gap: 18px; justify-content: center; align-items: center; }
+.fig-item { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 8px; border-radius: 12px; border: 2px solid transparent; }
+.fig-item.on { background: #fff3d6; border-color: var(--accent); }
+.fig-item .lbl { font-size: 14px; color: var(--muted); font-weight: 700; }
+.fbar-model { display: inline-flex; border: 2px solid var(--ink); border-radius: 6px; overflow: hidden; }
+.fbar-model span { width: 34px; height: 30px; border-right: 1px solid var(--ink); background: #fff; }
+.fbar-model span:last-child { border-right: none; }
+.fbar-model span.a { background: #9d8fee; } .fbar-model span.b { background: #ffcf8a; } .fbar-model span.x { background: #ddd; }
+.tile.frac-tile { display: inline-flex; flex-direction: column; align-items: center; padding: 8px 18px; line-height: 1.05; }
+.tile.frac-tile .d { border-top: 2.5px solid currentColor; padding: 0 3px; }
+.slot .frac { font-size: 20px; }
