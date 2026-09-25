@@ -428,3 +428,50 @@ input.carry-in:focus { border-color: var(--bad); }
 .clock.bad svg { filter: drop-shadow(0 0 6px rgba(255,107,107,.9)); }
 .clock.goodc svg { filter: drop-shadow(0 0 6px rgba(46,204,113,.9)); }
 .clockset .fill { margin-top: 10px; }
+
+/* ---- 象形图（Unit 16） ---- */
+.pg { display: inline-block; max-width: 100%; border: 2px solid var(--ink); border-radius: 10px; background: #fff; padding: 6px 10px 8px; text-align: left; }
+.pg-title { text-align: center; font-weight: 800; font-size: 18px; margin: 4px 0 8px; }
+.pg-sym { font-size: 26px; line-height: 1.1; display: inline-block; transition: transform .15s; }
+.pg-sym.hl { transform: scale(1.25); filter: drop-shadow(0 0 6px rgba(255,159,67,.9)); }
+.pg-sym.dim { opacity: .35; }
+.pg-horiz { display: table; border-collapse: collapse; }
+.pg-row { display: table-row; }
+.pg-row .pg-lab, .pg-row .pg-cells { display: table-cell; border: 1px solid #999; padding: 4px 10px; vertical-align: middle; }
+.pg-row .pg-lab { font-weight: 700; font-size: 17px; white-space: nowrap; min-width: 100px; }
+.pg-row .pg-cells { letter-spacing: 4px; min-width: 240px; white-space: nowrap; }
+.pg-row.hl .pg-lab, .pg-row.hl .pg-cells { background: #fff3d6; }
+.pg-num, .pg-note { font-size: 16px; color: var(--accent2, #7c3aed); font-weight: 700; letter-spacing: 0; margin-left: 10px; }
+.pg-vert { display: flex; align-items: flex-end; border: 1px solid #999; }
+.pg-col { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; border-right: 1px solid #999; min-width: 88px; padding: 6px 4px 0; transition: background .15s; }
+.pg-col:last-child { border-right: none; }
+.pg-col.hl { background: #fff3d6; }
+.pg-col.right { background: #e5f9ec; } .pg-col.wrong { background: #ffe1e1; }
+.pg-stack { display: flex; flex-direction: column-reverse; align-items: center; min-height: 34px; }
+.pg-stack .pg-sym { animation: pop .18s ease-out; }
+.pg-col .pg-lab { border-top: 1px solid #999; width: 100%; text-align: center; font-weight: 700; font-size: 15px; padding: 4px 2px; line-height: 1.2; }
+.pg-col .pg-ico { display: block; font-size: 24px; }
+.pg-col .pg-num { margin: 0 0 4px; }
+.pg-col .pg-note { margin: 0; padding: 2px 4px 4px; text-align: center; }
+.pg-ctl { display: flex; gap: 6px; padding: 6px 0; }
+.pg-ctl button { width: 34px; height: 34px; border-radius: 10px; border: 2px solid var(--primary); background: #fff; color: var(--primary); font-size: 22px; font-weight: 800; cursor: pointer; line-height: 1; }
+.pg-ctl button:hover:not(:disabled) { background: var(--primary); color: #fff; }
+.pg-ctl button:disabled { opacity: .35; cursor: default; }
+.pg-foot { text-align: center; margin-top: 8px; font-size: 16px; border-top: 1px solid #999; padding-top: 6px; }
+.pg-rect { display: inline-block; width: 26px; height: 14px; border: 2px solid var(--ink); border-radius: 3px; background: #e9e4ff; vertical-align: middle; margin: 2px 0; }
+.pg-chart { display: inline-flex; align-items: flex-end; border: 2px solid var(--ink); border-radius: 10px; background: #fff; overflow: hidden; }
+.pgc-col { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; border-right: 1px solid #999; padding: 8px 8px 0; min-width: 80px; }
+.pgc-col:last-child { border-right: none; }
+.pgc-col.hl { background: #fff3d6; }
+.pgc-stack { display: flex; flex-wrap: wrap-reverse; flex-direction: row; justify-content: center; max-width: 76px; gap: 2px; }
+.pgc-stack .pg-sym { font-size: 22px; }
+.pgc-cnt { font-weight: 800; color: var(--accent2, #7c3aed); font-size: 18px; }
+.pgc-lab { border-top: 1px solid #999; width: 100%; text-align: center; font-size: 14px; font-weight: 700; padding: 3px 0; }
+.pg-scene { display: inline-block; border: 2px solid var(--ink); border-radius: 14px; background: #f3f3f3; padding: 10px 16px; }
+.pgs-row { display: flex; flex-wrap: wrap; gap: 6px 10px; justify-content: center; margin: 6px 0; }
+.pgs-row .pg-sym { font-size: 32px; }
+.pgs-cnt { display: flex; flex-wrap: wrap; gap: 8px 18px; justify-content: center; margin-top: 8px; font-size: 18px; }
+.pgmake { text-align: center; }
+.pgmake .pg { margin-top: 8px; }
+@keyframes pop { from { transform: scale(.4); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@media (max-width: 700px) { .pg-row .pg-cells { white-space: normal; min-width: 0; } .pg-col { min-width: 64px; } .pg-sym { font-size: 22px; } }
