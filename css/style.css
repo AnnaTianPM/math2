@@ -614,3 +614,25 @@ input.carry-in:focus { border-color: var(--bad); }
 .bondq input.bondtx { width: 2.6em !important; }
 .crossq .fill { margin-top: 8px; }
 .crossq input.blank { width: 3em !important; }
+/* 图形与位置 */
+.shp2 { display: inline-flex; align-items: center; justify-content: center; vertical-align: middle; border-radius: 10px; padding: 4px; position: relative; }
+.shp2.hl { background: #fff3d6; outline: 3px solid var(--accent); }
+.shp2.blank-shp { width: 60px; height: 60px; border: 2px dashed #bbb; color: #bbb; font-size: 28px; font-weight: 800; }
+.shp2.letter { width: 48px; height: 48px; border: 2px solid var(--ink); background: #fff; font-size: 26px; font-weight: 900; margin: 0 3px; }
+.shp2.lab { flex-direction: column; } .shp2.lab i { font-style: normal; font-weight: 700; font-size: 15px; }
+.shaperow { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; align-items: center; }
+.shapefield { display: flex; flex-wrap: wrap; gap: 10px 14px; justify-content: center; align-items: center; max-width: 620px; margin: 0 auto; padding: 12px; border: 2px solid var(--ink); border-radius: 10px; background: #fff; }
+.pick-opts .choice .shp2 { padding: 0; }
+.pfblank { display: inline-flex; align-items: center; justify-content: center; width: 68px; height: 68px; border: 3px dashed var(--primary); border-radius: 10px; background: #f3f0ff; cursor: pointer; font-size: 28px; color: #aaa; font-weight: 800; }
+.pfblank.right { border-style: solid; border-color: var(--ok); background: #eafaf1; } .pfblank.wrong { border-style: solid; border-color: var(--bad); background: #fff0f0; }
+.cyitem { position: relative; cursor: pointer; display: inline-flex; border-radius: 10px; padding: 2px; }
+.cyitem:hover { background: #f3f0ff; }
+.cytag { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); font-size: 26px; font-weight: 900; color: var(--primary); pointer-events: none; }
+.cyitem.right { background: #eafaf1; } .cyitem.wrong { background: #ffe1e1; }
+.ordrow { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; }
+.orditem { display: inline-flex; flex-direction: column; align-items: center; width: 56px; padding: 4px 0; border-radius: 10px; }
+.orditem.hl { background: #fff3d6; outline: 3px solid var(--accent); }
+.ordico { font-size: 36px; line-height: 1.1; } .ordlab { font-size: 13px; color: var(--accent); height: 18px; }
+.pick-opts.ordpick-wrap .choice, .pick-opts .choice.ordpick { min-width: 0; }
+.ordpick-opts .choice { min-width: 54px; padding: 6px 4px; font-size: 34px; }
+.pick-opts.ordpick { gap: 6px; } .pick-opts.ordpick .choice { min-width: 54px; padding: 6px 4px; font-size: 34px; }

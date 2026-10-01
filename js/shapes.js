@@ -204,7 +204,7 @@
    */
   window.QTypes.pickone = q => {
     // 按钮带 class "choice"，app.js 会自动绑定点击和键盘 1-3
-    function html() { return `<div class="pick-opts">${q.options.map((o, i) => `<button type="button" class="choice pick-opt" data-val="${i}" data-i="${i}"><span class="key">${i + 1}</span>${o}</button>`).join('')}</div><div class="center sub">点一个，或按键盘 1 2 3</div>`; }
+    function html() { return `<div class="pick-opts ${q.cls || ''}">${q.options.map((o, i) => `<button type="button" class="choice pick-opt" data-val="${i}" data-i="${i}"><span class="key">${i + 1}</span>${o}</button>`).join('')}</div><div class="center sub">点一个，或按键盘 1 2 3</div>`; }
     function bind() { /* app.js 负责 */ }
     const opt = (box, i) => box.querySelector(`.pick-opt[data-i="${i}"]`);
     return {
