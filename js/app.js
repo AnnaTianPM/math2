@@ -477,6 +477,7 @@
     const nextGen = () => kp.generate(cfg.genType, state.genSeq++);
     if (cfg.mode === 'gen') questions = [nextGen()];
     const book = cfg.mode === 'book';
+    const quitHref = cfg.quitHref || kpHref(kp), quitLabel = cfg.quitLabel || '返回知识点';
     const listeners = [];
     function listen(fn) { document.addEventListener('keydown', fn); listeners.push(fn); }
     function unlisten() { listeners.forEach(f => document.removeEventListener('keydown', f)); listeners.length = 0; }
@@ -527,7 +528,7 @@
         <div class="toolbar">
           ${cfg.mode === 'gen' ? '' : '<button class="btn secondary small" id="redoBtn" title="清掉这道题的记录，重新作答">重做这题 🔄</button>'}
           ${book ? '<button class="btn secondary small" id="redoAll" title="清掉这部分全部记录，从第 1 题重新开始">重做这部分 🔁</button>' : ''}
-          <a class="btn secondary small" href="${kpHref(kp)}" id="quit">${cfg.mode === 'gen' ? '结束练习' : '返回知识点'}</a>
+          <a class="btn secondary small" href="${quitHref}" id="quit">${cfg.mode === 'gen' ? '结束练习' : quitLabel}</a>
         </div>
       </div>`;
       if ($('#redoBtn', box)) $('#redoBtn', box).onclick = () => redoCurrent(q);
@@ -713,7 +714,7 @@
         <ul class="result-list" style="text-align:left;max-width:460px;margin:10px auto">${list}</ul>
         <div class="actions">${wrongQs.length ? '<button class="btn" id="redoWrong">再做一遍错题 🔁</button>' : ''}
           ${undone ? '<button class="btn secondary" id="backToQ">回去做题 ✏️</button>' : ''}
-          ${cfg.mode === 'book' ? nextBtn : `<a class="btn" href="${kpHref(kp)}">返回知识点</a>`}</div></div>`;
+          ${cfg.mode === 'book' ? nextBtn : `<a class="btn" href="${quitHref}">${quitLabel}</a>`}</div></div>`;
       if (answered && right === answered) confetti();
       box.querySelectorAll('[data-jump]').forEach(b => b.onclick = () => { state.i = parseInt(b.dataset.jump, 10); render(); box.scrollIntoView({ behavior: 'smooth', block: 'start' }); });
       if (wrongQs.length) $('#redoWrong', box).onclick = () => { runSession(kp, box, Object.assign({}, cfg, { questions: wrongQs, retry: true, noAutoFocus: false })); box.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
@@ -722,7 +723,7 @@
     function finishGen() {
       unlisten();
       box.innerHTML = `<div class="card center"><div class="summary-big">${state.right >= 10 ? '🏆' : '😊'}</div><h2>这次做了 ${state.done} 题，答对 ${state.right} 题，最长连对 ${state.best} 🔥</h2>
-        <div class="actions"><a class="btn secondary" href="${kpHref(kp)}">返回知识点</a></div></div>`;
+        <div class="actions"><a class="btn secondary" href="${quitHref}">${quitLabel}</a></div></div>`;
     }
     render();
   }
@@ -754,11 +755,12 @@
       <div class="row" style="margin-bottom:14px"><button class="btn accent big" id="redoAll">重做全部错题 🔁</button><button class="btn secondary small" id="clearAll">清空错题本</button></div>`;
     for (const [kpId, ws] of Object.entries(byKP)) {
       const f = findKP(kpId);
-      html += `<div class="card"><h2><span class="tag">Level ${f ? f.level : '?'}</span> ${f ? esc(f.kp.title.zh) : kpId} <span class="en">${f ? esc(f.kp.title.en) : ''}</span></h2>`;
+      html += `<div class="card"><h2><span class="tag">Level ${f ? f.level : '?'} · Unit ${f ? f.unit.num : '?'}</span> ${f ? esc(f.kp.title.zh) : kpId} <span class="en">${f ? esc(f.kp.title.en) : ''}</span> <button class="btn small" data-redo="${esc(kpId)}" style="float:right">重做这组 (${ws.length}) 🔁</button></h2>`;
       html += ws.map(w => {
         const qv = questionView(w.q);
         const stage = w.q.type === 'blocks' ? `<div class="blocks">${Blocks.render(w.q, { scale: 0.7 })}</div>` : w.q.type === 'num2words' ? `<b>${w.q.n}</b> → 英文` : w.q.type === 'words2num' ? `<b>${NumWords.toWords(w.q.n)}</b> → 数字` : esc(qLabel(w.q));
-        return `<div class="wrong-item"><div><div class="wrong-q"><span class="tag">${w.q.gen ? '随机题' : w.q.id.split('-').slice(2).join('-')}</span>${stage}</div>
+        const pos = /([A-Z])(\d+)$/.exec(w.q.id), posTxt = pos ? `第 ${pos[1]} 部分 第 ${pos[2]} 题` : w.q.id;
+        return `<div class="wrong-item"><div><div class="wrong-q"><span class="tag">${w.q.gen ? '随机题' : posTxt}</span>${stage}</div>
           <div class="wrong-meta">你的答案：<b class="bad">${esc(w.yourAnswer)}</b> ｜ 正确：<b class="ok">${esc(qv.answerText)}</b> ｜ 错了 ${w.times} 次 ｜ 还需答对 ${w.need} 次</div></div>
           <div><button class="btn small secondary" data-explain="${w.q.id}">看讲解</button> <button class="btn small secondary" data-del="${w.q.id}">移出</button></div></div>`;
       }).join('');
@@ -766,13 +768,9 @@
     }
     app.innerHTML = html;
     app.querySelectorAll('[data-lv]').forEach(b => b.onclick = () => { renderWrong.filter = +b.dataset.lv; renderWrong(); });
-    $('#redoAll').onclick = () => {
-      // 按知识点分组重做（当前只有一个知识点，取第一组）
-      const kpId = Object.keys(byKP)[0];
-      const f = findKP(kpId);
-      app.innerHTML = `<h1>📕 错题重做</h1><div id="redoBox"></div>`;
-      runSession(f.kp, $('#redoBox'), { mode: 'redo', questions: shown.filter(w => w.kp === kpId).map(w => w.q) });
-    };
+    const redoQs = qs => { const f = findKP(qs[0].kp) || findKP(Object.keys(byKP)[0]); app.innerHTML = `<h1>📕 错题重做 <span class="en">Redo mistakes</span></h1><p class="sub">共 ${qs.length} 题，连续答对 2 次自动移出错题本。</p><div id="redoBox"></div>`; runSession(f.kp, $('#redoBox'), { mode: 'redo', questions: qs.map(w => w.q), quitHref: '#/wrong', quitLabel: '返回错题本' }); };
+    $('#redoAll').onclick = () => redoQs(shown);
+    app.querySelectorAll('[data-redo]').forEach(b => b.onclick = () => redoQs(byKP[b.dataset.redo]));
     $('#clearAll').onclick = () => { if (confirm('确定清空错题本吗？')) { Store.clearWrong(); updateWrongBadge(); renderWrong(); } };
     app.querySelectorAll('[data-del]').forEach(b => b.onclick = () => { Store.removeWrong(b.dataset.del); updateWrongBadge(); renderWrong(); });
     app.querySelectorAll('[data-explain]').forEach(b => b.onclick = () => { const w = list.find(x => x.q.id === b.dataset.explain); const qv = questionView(w.q); if (qv.explainKind) showExplain(qv.explainKind, qv.n); else alert('这道题没有分步讲解'); });
