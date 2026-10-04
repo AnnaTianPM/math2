@@ -680,3 +680,16 @@ input.carry-in:focus { border-color: var(--bad); }
 .barrow { display: flex; border: 2px solid var(--ink); border-radius: 4px; overflow: hidden; }
 .barseg { padding: 6px 10px; text-align: center; font-weight: 800; background: #e9e4ff; } .barseg.alt { background: #ffe9c9; border-left: 2px solid var(--ink); }
 .barlab { text-align: center; font-weight: 800; margin-top: 2px; color: var(--accent); }
+
+/* Level 1 象形图 */
+.l1pg .pg-stack.wide { flex-direction: row; flex-wrap: wrap-reverse; max-width: 74px; justify-content: center; gap: 2px; }
+.l1pg .pg-stack.row { display: inline; }
+.l1pg .pg-sym img, .l1pg .pg-ico img { height: 30px; vertical-align: middle; }
+.l1pg .pg-row .pg-lab .pg-ico { font-size: 22px; margin-right: 6px; }
+.l1pg .pg-foot .zh { color: #888; font-size: 14px; margin-left: 8px; }
+.l1pg .pg-col .pg-note { order: -1; margin-bottom: 4px; }
+.l1pg .pg-col { min-width: 80px; }
+.l1pg input.pg-in { width: 46px; height: 34px; font-size: 20px; text-align: center; margin: 4px; }
+.l1pg .pg-row.right .pg-cells { background: #e5f9ec; } .l1pg .pg-row.wrong .pg-cells { background: #ffe1e1; }
+.l1pg .pg-sym.dice { font-size: 32px; }
+.l1pg .pg-lab .dice, .l1pg .pg-note .dice, .expand-line .dice { font-size: 30px; line-height: 1; vertical-align: middle; }
