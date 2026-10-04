@@ -7,7 +7,7 @@
   const seq = (a, b) => { const r = []; for (let i = a; i <= b; i++) r.push(i); return r; };
   const img = (name, w) => `<img class="figimg" src="img/${name}.png" alt="" style="max-width:${w || 420}px">`;
   const eq = (a, op, b, s, hl) => `<div class="eqline"><span class="eq-s ${hl === 'a' ? 'hl' : ''}">${a}</span> ${op} <span class="eq-s ${hl === 'b' ? 'hl' : ''}">${b}</span> = <span class="eq-s ${hl === 's' ? 'hl' : ''}">${s}</span></div>`;
-  const col = cfg => `<div class="center">${A.columnHTML(Object.assign({ width: 2 }, cfg))}</div>`;
+  const col = cfg => `<div class="center">${A.columnHTML(Object.assign({ width: cfg.op === '+' && cfg.a + cfg.b >= 100 ? 3 : 2 }, cfg))}</div>`;
   const T = n => Math.floor(n / 10), O = n => n % 10;
 
   const S = window.StepKinds;
@@ -45,8 +45,8 @@
       { zh: `上下对齐：个位对个位（Ones），十位对十位（Tens）。`, en: 'Line up the ones and the tens.', render: s => { s.innerHTML = col({ a, b, op: '+' }); } },
       carry ? { zh: `先加个位：${O(a)} + ${O(b)} = <b>${o}</b>。${o} 个一要<b>进位</b>：写 ${od}，向十位进 1（10 ones = 1 ten）。`, en: `Add the ones: ${O(a)} + ${O(b)} = ${o}. Regroup: write ${od}, carry 1.`, render: s => { s.innerHTML = wrap(col({ a, b, op: '+', result: ['', od], carries: { t: 1 }, hl: 'o' }), line(`${O(a)} + ${O(b)} = ${o} = 1 ten ${od} ones`)); } }
         : { zh: `先加个位：${O(a)} + ${O(b)} = <b>${o}</b>，写在个位。`, en: `Add the ones: ${O(a)} + ${O(b)} = ${o}.`, render: s => { s.innerHTML = wrap(col({ a, b, op: '+', result: ['', od], hl: 'o' }), line(`${O(a)} ones + ${O(b)} ones = ${o} ones`)); } },
-      { zh: `再加十位：${carry ? '进上来的 1 + ' : ''}${T(a)} + ${T(b)} = <b>${t}</b>，写在十位。`, en: `Add the tens: ${carry ? '1 + ' : ''}${T(a)} + ${T(b)} = ${t}.`, render: s => { s.innerHTML = wrap(col({ a, b, op: '+', result: [t, od], carries: carry ? { t: 1 } : {}, hl: 't' }), line(`${carry ? '1 + ' : ''}${T(a)} tens + ${T(b)} tens = ${t} tens`)); } },
-      { zh: `所以 <b>${a} + ${b} = ${sum}</b>。`, en: `${a} + ${b} = ${sum}.`, render: s => { s.innerHTML = wrap(col({ a, b, op: '+', result: [t, od], carries: carry ? { t: 1 } : {} }), eq(a, '+', b, sum, 's')); } },
+      { zh: `再加十位：${carry ? '进上来的 1 + ' : ''}${T(a)} + ${T(b)} = <b>${t}</b>，写在十位${t >= 10 ? '（10 个十就是 1 个百，写到百位）' : ''}。`, en: `Add the tens: ${carry ? '1 + ' : ''}${T(a)} + ${T(b)} = ${t}.`, render: s => { s.innerHTML = wrap(col({ a, b, op: '+', result: t >= 10 ? [1, 0, od] : [t, od], carries: carry ? { t: 1 } : {}, hl: 't' }), line(`${carry ? '1 + ' : ''}${T(a)} tens + ${T(b)} tens = ${t} tens`)); } },
+      { zh: `所以 <b>${a} + ${b} = ${sum}</b>。`, en: `${a} + ${b} = ${sum}.`, render: s => { s.innerHTML = wrap(col({ a, b, op: '+', result: t >= 10 ? [1, 0, od] : [t, od], carries: carry ? { t: 1 } : {} }), eq(a, '+', b, sum, 's')); } },
     ];
     return steps;
   };

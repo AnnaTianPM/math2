@@ -701,3 +701,11 @@ input.carry-in:focus { border-color: var(--bad); }
 .divshape { font-size: 30px; line-height: 1; color: var(--ink); }
 .scene-ico { font-size: 44px; line-height: 1.2; }
 .match .mitem svg { display: block; }
+.setbox2.big { flex-direction: column; align-items: stretch; }
+.setbox2.big .setbox { max-width: 100%; }
+.setbox2.big .frames2 { justify-content: flex-start; }
+.cmp-dots .frames2 .tf { transform: scale(.8); margin: -4px -6px; }
+.money-two { display: inline-flex; align-items: center; gap: 14px; flex-wrap: wrap; justify-content: center; } .money-two > span { display: inline-flex; flex-direction: column; align-items: center; gap: 4px; border: 2px dashed #ccc; border-radius: 12px; padding: 6px 10px; } .money-two .op { border: none; font-size: 30px; font-weight: 800; color: var(--accent); }
+.price-tags { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin: 8px 0; } .ptag { border: 2px solid var(--accent); border-radius: 20px; padding: 4px 12px; font-size: 15px; background: #fffdf5; } .ptag b { color: var(--primary); margin-left: 4px; } .ptag.hl { background: #fff3d6; outline: 3px solid var(--accent); }
+.match .mitem .money-group { display: inline-flex; max-width: 300px; gap: 3px; } .match .mitem .money { transform: scale(.72); margin: -6px -5px; }
+.pick-set .money { cursor: pointer; }
