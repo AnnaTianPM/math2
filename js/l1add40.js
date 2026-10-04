@@ -73,11 +73,17 @@
   S.l1word40 = ({ en, zh, a, b, op, sentence, cmp }) => {
     const ans = op === '+' ? a + b : a - b;
     const text = `<div class="wp-text"><div class="wp-en">${esc(en)}</div><div class="wp-zh">${esc(zh)}</div></div>`;
-    const bar = `<div class="bar2"><div class="barrow"><span class="barseg" style="flex:${a}">${a}</span><span class="barseg alt" style="flex:${b}">${op === '+' ? b : '?'}</span></div><div class="barlab">${op === '+' ? '?' : a}</div></div>`;
+    const bar = op === '+'
+      ? `<div class="bar2"><div class="barrow"><span class="barseg" style="flex:${a}">${a}</span><span class="barseg alt" style="flex:${b}">${b}</span></div><div class="barlab">?</div></div>`
+      : cmp === 'less'
+        ? `<div class="bar2"><div class="barrow"><span class="barseg" style="flex:${a}">${a}</span></div><div class="barrow" style="margin-top:4px;border-color:transparent"><span class="barseg" style="flex:${a - b};border:2px solid var(--ink);border-radius:4px">?</span><span class="barseg alt" style="flex:${b};background:none;border:2px dashed var(--ink);border-radius:4px">${b}</span></div></div>`
+      : cmp
+        ? `<div class="bar2"><div class="barrow"><span class="barseg" style="flex:${a}">${a}</span></div><div class="barrow" style="margin-top:4px;border-color:transparent"><span class="barseg alt" style="flex:${b};border:2px solid var(--ink);border-radius:4px">${b}</span><span class="barseg" style="flex:${a - b};background:none;border:2px dashed var(--ink);border-radius:4px">?</span></div></div>`
+        : `<div class="bar2"><div class="barlab">${a}</div><div class="barrow"><span class="barseg alt" style="flex:${b}">${b}</span><span class="barseg" style="flex:${a - b}">?</span></div></div>`;
     const colSteps = op === '+' ? S.l1coladd({ a, b }) : S.l1colsub({ a, b });
     return [
-      { zh: op === '+' ? (cmp ? `读题：一个是 <b>${a}</b>，另一个<b>比它多 ${b}</b>。“多”就是在 ${a} 上再加 ${b}。` : `读题：两部分 <b>${a}</b> 和 <b>${b}</b>，问“一共 / now / altogether”，合起来用<b>加法</b>。`) : `读题：一共 <b>${a}</b>，减去 <b>${b}</b>，用<b>减法</b>。`, en: op === '+' ? 'Add.' : 'Subtract.', render: s => { s.innerHTML = wrap(text); } },
-      { zh: `画条形图：${op === '+' ? `${a} 和 ${b} 接起来，整条是 ?` : `整条是 ${a}，拿走 ${b}，剩下 ?`}。列算式：<b>${a} ${op === '+' ? '+' : '−'} ${b}</b>。`, en: `${a} ${op} ${b}.`, render: s => { s.innerHTML = wrap(bar, eq(a, op === '+' ? '+' : '−', b, '?')); } },
+      { zh: op === '+' ? (cmp ? `读题：一个是 <b>${a}</b>，另一个<b>比它多 ${b}</b>。“多”就是在 ${a} 上再加 ${b}。` : `读题：两部分 <b>${a}</b> 和 <b>${b}</b>，问“一共 / now / altogether”，合起来用<b>加法</b>。`) : (cmp === 'less' ? `读题：一个是 <b>${a}</b>，另一个<b>比它少 ${b}</b>（fewer）。“少”就是从 ${a} 里去掉 ${b}，用<b>减法</b>。` : cmp ? `读题：一个是 <b>${a}</b>，一个是 <b>${b}</b>，问“多几 / 少几”（more / fewer）。比较两个数差多少，用<b>减法</b>：大的减小的。` : `读题：一共 <b>${a}</b>，拿走 / 减去 <b>${b}</b>，问剩下多少，用<b>减法</b>。`), en: op === '+' ? 'Add.' : 'Subtract.', render: s => { s.innerHTML = wrap(text); } },
+      { zh: `画条形图：${op === '+' ? `${a} 和 ${b} 接起来，整条是 ?` : cmp === 'less' ? `上面一条是 ${a}，下面一条短 ${b}，短的那条是 ?` : cmp ? `上面一条是 ${a}，下面一条是 ${b}，多出来的一段是 ?` : `整条是 ${a}，拿走 ${b}，剩下 ?`}。列算式：<b>${a} ${op === '+' ? '+' : '−'} ${b}</b>。`, en: `${a} ${op} ${b}.`, render: s => { s.innerHTML = wrap(bar, eq(a, op === '+' ? '+' : '−', b, '?')); } },
       ...colSteps.slice(1),
       { zh: `答：${esc(sentence).replace('___', `<b>${ans}</b>`)}`, en: sentence.replace('___', String(ans)), render: s => { s.innerHTML = wrap(eq(a, op === '+' ? '+' : '−', b, ans, 's'), line(esc(sentence).replace('___', `<b>${ans}</b>`))); } },
     ];

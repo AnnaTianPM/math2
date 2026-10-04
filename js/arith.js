@@ -284,7 +284,7 @@
       hint: q.op === '+' ? { zh: '先加个位。满 10 就写个位数、向十位进 1。再加十位（别忘了进上来的 1），最后加百位。', en: 'Add the ones first. If 10 or more, write the ones digit and carry 1.' } : { zh: '先减个位。不够减就向十位借 1（十位减 1，个位加 10）。再减十位，最后减百位。', en: 'Subtract the ones first. If not enough, regroup 1 ten into 10 ones.' },
       answerText: String(ans),
       check: v => parseInt(v, 10) === ans,
-      explainKind: q.op === '+' ? 'coladd' : 'colsub', n: { a: q.a, b: q.b },
+      explainKind: q.explain ? q.explain[0] : (q.op === '+' ? 'coladd' : 'colsub'), n: q.explain ? q.explain[1] : { a: q.a, b: q.b },
     };
   };
 

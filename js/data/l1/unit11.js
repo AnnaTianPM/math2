@@ -7,7 +7,7 @@
   const img = (name, w) => L.img('l1u11/' + name, w || 420);
   const F = (id, p, text, fields, explain, zh, en, o) => Object.assign({ id, type: 'fill', pic: p, label: text.replace(/\{\{\w+\}\}/g, '___').replace(/\n/g, ' '), prompt: { zh, en: en || 'Fill in the blanks' }, text, fields, answerText: Object.values(fields).map(f => f.a).join(', '), explain }, o || {});
   const B = (id, w, a, b, blank, p, explain, o) => Object.assign({ id, type: 'bond', w, a, b, blank, pic: p, explain, label: `${w} ← ${a} , ${b}` }, o || {});
-  const C = (id, a, b, o) => Object.assign({ id, type: 'column', a, b, op: '+', width: 2, label: `${a} + ${b} = ${a + b}` }, o || {});
+  const C = (id, a, b, o) => Object.assign({ id, type: 'column', a, b, op: '+', width: 2, label: `${a} + ${b} = ${a + b}`, explain: ['l1coladd', { a, b }] }, o || {});
   const wp = (en, zh) => `<div class="wp-text"><div class="wp-en">${en}</div><div class="wp-zh">${zh}</div></div>`;
   const strip = circle => pic(L.strip({ from: 20, to: 40, circle }));
   const T = n => Math.floor(n / 10) * 10, O = n => n % 10;
