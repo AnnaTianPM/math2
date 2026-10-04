@@ -18,5 +18,9 @@
     [14, '乘法', 'Multiplying'],
     [15, '除法', 'Dividing'],
     [16, '时间', 'Time'],
+    [17, '100 以内的数', 'Numbers within 100'],
+    [18, '100 以内的加法', 'Adding Numbers within 100'],
+    [19, '100 以内的减法', 'Subtracting Numbers within 100'],
+    [20, '钱', 'Money'],
   ].forEach(([num, zh, en]) => U.push({ id: `l1u${num}`, num, title: { zh, en }, kps: [] }));
 })();

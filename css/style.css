@@ -699,3 +699,5 @@ input.carry-in:focus { border-color: var(--bad); }
 .divbox { display: inline-flex; align-items: center; justify-content: center; min-width: 70px; height: 54px; border: 2px solid var(--accent); border-radius: 8px; background: #fff; font-size: 30px; }
 .divbox.cont { border-style: dashed; }
 .divshape { font-size: 30px; line-height: 1; color: var(--ink); }
+.scene-ico { font-size: 44px; line-height: 1.2; }
+.match .mitem svg { display: block; }
