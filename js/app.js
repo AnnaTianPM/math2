@@ -472,7 +472,7 @@
   /* 练习会话：mode = book（课本题，记录进度）| redo（错题本重做）| gen（随机题，暂未开放）
    * cfg.retry = true 时，忽略这些题以前的记录，当作新题重做（“只做错题”用） */
   function runSession(kp, box, cfg) {
-    const state = { i: 0, attempts: 0, results: {}, answers: {}, streak: 0, best: 0, genSeq: 0, phase: 'answer', done: 0, right: 0 };
+    const state = { i: 0, attempts: 0, results: {}, answers: {}, streak: 0, best: 0, genSeq: 0, phase: 'answer', done: 0, right: 0, firstTry: {} };
     let questions = cfg.questions ? cfg.questions.slice() : [];
     const nextGen = () => kp.generate(cfg.genType, state.genSeq++);
     if (cfg.mode === 'gen') questions = [nextGen()];
@@ -578,7 +578,7 @@
       fb.innerHTML = status === 'ok' ? '✅ 这题做对了 <span class="en">Correct</span>'
         : status === 'fixed' ? '🟡 这题改对了 <span class="en">Fixed</span>'
         : `❌ 这题做错了，正确答案是：<b>${esc(qv.answerText)}</b><span class="en">The answer is ${esc(qv.answerText)}</span>`;
-      $('#actions', box).innerHTML = `${status === 'bad' && qv.explainKind ? '<button class="btn accent" id="explainBtn">看讲解 📖</button>' : ''}
+      $('#actions', box).innerHTML = `${status === 'bad' && qv.explainKind ? '<button class="btn accent" id="explainBtn">看一遍正确做法 📖</button>' : ''}
         <button class="btn" id="nextBtn">${isLast() ? '看结果 🏁' : '下一题 ▶'} <span style="font-size:13px;opacity:.8">(Enter)</span></button>`;
       if (status === 'bad' && qv.explainKind) $('#explainBtn', box).onclick = () => showExplain(qv.explainKind, qv.n);
       $('#nextBtn', box).onclick = next;
@@ -592,11 +592,11 @@
       delete state.results[q.id]; delete state.answers[q.id];
       if (book) { Store.clearProgress(q.id); updateWrongBadge(); }
       render();
-      const fb = $('#fb', box); if (fb) fb.innerHTML = had ? '🔄 记录已清掉，重新做一次吧 <span class="en">Cleared, try again</span>' : '';
+      const fb = $('#fb', box); if (fb) fb.innerHTML = had ? '🔄 重新做一次吧（错题本里的记录会保留） <span class="en">Try again</span>' : '';
       const inp = $('#ans', box); if (inp) inp.focus({ preventScroll: true });
     }
     function redoSection() {
-      if (!confirm(`确定把这部分 ${questions.length} 道题的记录全部清掉，从第 1 题重新开始吗？`)) return;
+      if (!confirm(`确定这部分 ${questions.length} 道题从第 1 题重新做吗？（错题本记录会保留）`)) return;
       state.results = {}; state.answers = {};
       Store.clearMany(questions.map(q => q.id)); updateWrongBadge();
       state.i = 0; render();
@@ -625,11 +625,11 @@
         if (firstTry) Store.addStar(1);
         if (cfg.mode === 'redo') {
           const gone = Store.wrongSolved(q.id);
-          fb.innerHTML += gone ? '<span class="hint">🎊 连对两次，这题从错题本移出啦！</span>' : '<span class="hint">再答对一次就能从错题本移出。</span>';
+          fb.innerHTML += gone ? '<span class="hint">🎊 连对两次，这题掌握啦！（记录放到错题本“已掌握”里）</span>' : '<span class="hint">再答对一次就算掌握。</span>';
           updateWrongBadge();
         } else if (Store.wrongList().some(w => w.q.id === q.id)) {
           const gone = Store.wrongSolved(q.id); updateWrongBadge();
-          if (gone) fb.innerHTML += '<span class="hint">🎊 这题从错题本移出啦！</span>';
+          if (gone) fb.innerHTML += '<span class="hint">🎊 这题掌握啦，从待重做的错题里移走。</span>';
         }
         afterAnswer(q, qv, true);
       } else {
@@ -639,6 +639,7 @@
         if (qv.custom && state.attempts === 1) qv.custom.markWrong(box, val);
         fb.className = 'feedback bad';
         if (state.attempts === 1) {
+          state.firstTry[q.id] = { disp: qv.answerDisplay ? qv.answerDisplay(val) : val, raw: val };
           const d = qv.diagnose ? qv.diagnose(val) : null;
           fb.innerHTML = `🤔 再想一想 <span class="en">Try again</span><span class="hint">${d ? d.zh + ' ' : ''}提示：${qv.hint.zh}<br><span class="en">${(d ? d.en + ' ' : '') + qv.hint.en}</span></span>`;
           if (inp) inp.select();
@@ -650,7 +651,7 @@
           state.done++; state.streak = 0;
           record(q, 'bad', val);
           if (cfg.mode === 'redo') Store.wrongFailed(q.id);
-          Store.addWrong(q, kp.id, qv.answerDisplay ? qv.answerDisplay(val) : val, qv.answerText);
+          Store.addWrong(q, kp.id, qv.answerDisplay ? qv.answerDisplay(val) : val, qv.answerText, val, state.firstTry[q.id]);
           updateWrongBadge();
           afterAnswer(q, qv, false);
         }
@@ -662,7 +663,7 @@
       const inp = $('#ans', box); if (inp) { inp.disabled = true; inp.blur(); $('#submit', box).disabled = true; }
       // 题号颜色刷新
       const nav = $('.qnav', box); if (nav) { nav.outerHTML = navHTML(); bindNav(); }
-      $('#actions', box).innerHTML = `${correct || !qv.explainKind ? '' : '<button class="btn accent" id="explainBtn">看讲解 📖</button>'}
+      $('#actions', box).innerHTML = `${correct || !qv.explainKind ? '' : '<button class="btn accent" id="explainBtn">看一遍正确做法 📖</button>'}
         <button class="btn" id="nextBtn">${isLast() ? '看结果 🏁' : '下一题 ▶'} <span style="font-size:13px;opacity:.8">(Enter)</span></button>`;
       $('#nextBtn', box).onclick = next;
       if (!correct && qv.explainKind) $('#explainBtn', box).onclick = () => showExplain(qv.explainKind, qv.n);
@@ -739,10 +740,23 @@
   }
 
   // ---------- 错题本 ----------
+  // 把一道题原样渲染出来，并把孩子当时的答案标出来（错题本用）
+  function questionSnapshot(w, raw, status) {
+    const q = w.q, qv = questionView(q);
+    const stageHTML = q.type === 'blocks' ? `<div class="blocks">${Blocks.render(q, { scale: 0.7 })}</div>` : (qv.stage || '');
+    const box = document.createElement('div'); box.className = 'wq-snap';
+    box.innerHTML = `<div class="wq-prompt">${qv.prompt ? esc(qv.prompt.zh) : ''}</div>${stageHTML ? `<div class="stage small">${stageHTML}</div>` : ''}<div class="wq-body">${qv.custom ? qv.custom.html() : qv.choices ? `<div class="choices">${qv.choices.map((c, i) => `<button class="choice" data-val="${esc(c)}"><span class="key">${i + 1}</span>${esc(c)}</button>`).join('')}</div>` : `<div class="fill">${esc(qLabel(q))}</div>`}</div>`;
+    try {
+      if (qv.custom) { qv.custom.bind(box, () => {}); if (raw !== undefined && raw !== null) qv.custom.restore(box, raw, status); else qv.custom.showAnswer(box); }
+      else if (qv.choices) { box.querySelectorAll('.choice').forEach(b => { b.disabled = true; if (b.dataset.val === String(raw)) b.classList.add('wrong'); if (b.dataset.val === qv.answerText) b.classList.add('right'); }); }
+    } catch (e) { /* 旧记录没有原始答案时只显示题目 */ }
+    box.querySelectorAll('button, input').forEach(el => { el.disabled = true; });
+    return box;
+  }
   function renderWrong() {
     setNav('wrong');
-    const list = Store.wrongList();
-    if (!list.length) { app.innerHTML = `<h1>📕 错题本 <span class="en">Mistakes</span></h1><div class="card center"><div class="summary-big">🌈</div><h2>错题本是空的，真棒！</h2><a class="btn" href="#/">去练习</a></div>`; return; }
+    const list = Store.wrongList(), doneList = Store.wrongDone();
+    if (!list.length && !doneList.length) { app.innerHTML = `<h1>📕 错题本 <span class="en">Mistakes</span></h1><div class="card center"><div class="summary-big">🌈</div><h2>错题本是空的，真棒！</h2><a class="btn" href="#/">去练习</a></div>`; return; }
     const lvOf = w => { const f = findKP(w.kp); return f ? f.level : 2; };
     const lvCounts = {}; list.forEach(w => { const n = lvOf(w); lvCounts[n] = (lvCounts[n] || 0) + 1; });
     const lvKeys = Object.keys(lvCounts).map(Number).sort();
@@ -750,30 +764,38 @@
     const shown = filter ? list.filter(w => lvOf(w) === filter) : list;
     const byKP = {};
     shown.forEach(w => { (byKP[w.kp] = byKP[w.kp] || []).push(w); });
-    let html = `<h1>📕 错题本 <span class="en">Mistakes</span></h1><p class="sub">共 ${list.length} 题。重做时连续答对 2 次，题目会自动移出。</p>
+    const fmtDate = ts => ts ? new Date(ts).toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric' }) : '';
+    const posOf = q => { const pos = /([A-Z])(\d+)$/.exec(q.id); return pos ? `第 ${pos[1]} 部分 第 ${pos[2]} 题` : q.id; };
+    const itemHTML = (w, done) => {
+      const qv = questionView(w.q);
+      const tries = (w.history || []).map(h => h.ans); const extra = tries.length > 1 ? ` ｜ 后来又填过：${tries.slice(1).map(a => `<b class="bad">${esc(a)}</b>`).join('、')}` : '';
+      return `<div class="wrong-item ${done ? 'done' : ''}" data-wid="${esc(w.q.id)}"><div><div class="wrong-q"><span class="tag">${w.q.gen ? '随机题' : posOf(w.q)}</span><span class="sub">${fmtDate(w.firstTs || w.ts)} 第一次做错</span></div>
+          <div class="wq-holder"></div>
+          <div class="wrong-meta">第一次填的：<b class="bad">${esc(w.first !== undefined ? w.first : w.yourAnswer)}</b>${extra} ｜ 正确：<b class="ok">${esc(qv.answerText)}</b> ｜ 错了 ${w.times} 次${done ? ' ｜ ✅ 已掌握' : ` ｜ 还需连对 ${w.need} 次`}</div></div>
+          <div><button class="btn small secondary" data-explain="${esc(w.q.id)}">看一遍正确做法</button> <button class="btn small secondary" data-del="${esc(w.q.id)}">移出</button></div></div>`;
+    };
+    let html = `<h1>📕 错题本 <span class="en">Mistakes</span></h1><p class="sub">待重做 ${list.length} 题${doneList.length ? `，已掌握 ${doneList.length} 题` : ''}。重做时连续答对 2 次就算掌握，记录会保留在下面“已掌握”里。</p>
       ${lvKeys.length > 1 ? `<div class="row" style="margin-bottom:10px"><button class="btn small ${filter ? 'secondary' : ''}" data-lv="0">全部 (${list.length})</button>${lvKeys.map(n => `<button class="btn small ${filter === n ? '' : 'secondary'}" data-lv="${n}">Level ${n} (${lvCounts[n]})</button>`).join('')}</div>` : ''}
-      <div class="row" style="margin-bottom:14px"><button class="btn accent big" id="redoAll">重做全部错题 🔁</button><button class="btn secondary small" id="clearAll">清空错题本</button></div>`;
+      ${list.length ? `<div class="row" style="margin-bottom:14px"><button class="btn accent big" id="redoAll">重做全部错题 🔁</button><button class="btn secondary small" id="clearAll">清空错题本</button></div>` : ''}`;
     for (const [kpId, ws] of Object.entries(byKP)) {
       const f = findKP(kpId);
       html += `<div class="card"><h2><span class="tag">Level ${f ? f.level : '?'} · Unit ${f ? f.unit.num : '?'}</span> ${f ? esc(f.kp.title.zh) : kpId} <span class="en">${f ? esc(f.kp.title.en) : ''}</span> <button class="btn small" data-redo="${esc(kpId)}" style="float:right">重做这组 (${ws.length}) 🔁</button></h2>`;
-      html += ws.map(w => {
-        const qv = questionView(w.q);
-        const stage = w.q.type === 'blocks' ? `<div class="blocks">${Blocks.render(w.q, { scale: 0.7 })}</div>` : w.q.type === 'num2words' ? `<b>${w.q.n}</b> → 英文` : w.q.type === 'words2num' ? `<b>${NumWords.toWords(w.q.n)}</b> → 数字` : esc(qLabel(w.q));
-        const pos = /([A-Z])(\d+)$/.exec(w.q.id), posTxt = pos ? `第 ${pos[1]} 部分 第 ${pos[2]} 题` : w.q.id;
-        return `<div class="wrong-item"><div><div class="wrong-q"><span class="tag">${w.q.gen ? '随机题' : posTxt}</span>${stage}</div>
-          <div class="wrong-meta">你的答案：<b class="bad">${esc(w.yourAnswer)}</b> ｜ 正确：<b class="ok">${esc(qv.answerText)}</b> ｜ 错了 ${w.times} 次 ｜ 还需答对 ${w.need} 次</div></div>
-          <div><button class="btn small secondary" data-explain="${w.q.id}">看讲解</button> <button class="btn small secondary" data-del="${w.q.id}">移出</button></div></div>`;
-      }).join('');
+      html += ws.map(w => itemHTML(w, false)).join('');
       html += '</div>';
     }
+    if (doneList.length) {
+      html += `<details class="card done-card"><summary><h2 style="display:inline">✅ 已掌握的错题 (${doneList.length}) <span class="sub">点开看</span></h2></summary>${doneList.map(w => itemHTML(w, true)).join('')}</details>`;
+    }
     app.innerHTML = html;
+    const all = list.concat(doneList);
+    app.querySelectorAll('.wrong-item').forEach(el => { const w = all.find(x => x.q.id === el.dataset.wid); if (!w) return; try { el.querySelector('.wq-holder').appendChild(questionSnapshot(w, w.firstRaw !== undefined ? w.firstRaw : w.raw, 'bad')); } catch (e) { el.querySelector('.wq-holder').innerHTML = `<div class="fill">${esc(qLabel(w.q))}</div>`; } });
     app.querySelectorAll('[data-lv]').forEach(b => b.onclick = () => { renderWrong.filter = +b.dataset.lv; renderWrong(); });
-    const redoQs = qs => { const f = findKP(qs[0].kp) || findKP(Object.keys(byKP)[0]); app.innerHTML = `<h1>📕 错题重做 <span class="en">Redo mistakes</span></h1><p class="sub">共 ${qs.length} 题，连续答对 2 次自动移出错题本。</p><div id="redoBox"></div>`; runSession(f.kp, $('#redoBox'), { mode: 'redo', questions: qs.map(w => w.q), quitHref: '#/wrong', quitLabel: '返回错题本' }); };
-    $('#redoAll').onclick = () => redoQs(shown);
+    const redoQs = qs => { const f = findKP(qs[0].kp) || findKP(Object.keys(byKP)[0]); app.innerHTML = `<h1>📕 错题重做 <span class="en">Redo mistakes</span></h1><p class="sub">共 ${qs.length} 题，连续答对 2 次就算掌握。</p><div id="redoBox"></div>`; runSession(f.kp, $('#redoBox'), { mode: 'redo', questions: qs.map(w => w.q), quitHref: '#/wrong', quitLabel: '返回错题本' }); };
+    if ($('#redoAll')) $('#redoAll').onclick = () => redoQs(shown);
     app.querySelectorAll('[data-redo]').forEach(b => b.onclick = () => redoQs(byKP[b.dataset.redo]));
-    $('#clearAll').onclick = () => { if (confirm('确定清空错题本吗？')) { Store.clearWrong(); updateWrongBadge(); renderWrong(); } };
+    if ($('#clearAll')) $('#clearAll').onclick = () => { if (confirm('确定清空错题本吗？（包括已掌握的记录）')) { Store.clearWrong(); updateWrongBadge(); renderWrong(); } };
     app.querySelectorAll('[data-del]').forEach(b => b.onclick = () => { Store.removeWrong(b.dataset.del); updateWrongBadge(); renderWrong(); });
-    app.querySelectorAll('[data-explain]').forEach(b => b.onclick = () => { const w = list.find(x => x.q.id === b.dataset.explain); const qv = questionView(w.q); if (qv.explainKind) showExplain(qv.explainKind, qv.n); else alert('这道题没有分步讲解'); });
+    app.querySelectorAll('[data-explain]').forEach(b => b.onclick = () => { const w = all.find(x => x.q.id === b.dataset.explain); const qv = questionView(w.q); if (qv.explainKind) showExplain(qv.explainKind, qv.n); else alert('这道题没有分步演示'); });
   }
 
   // ---------- 进度 ----------

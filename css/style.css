@@ -663,3 +663,20 @@ input.carry-in:focus { border-color: var(--bad); }
 .numbox { display: inline-flex; gap: 30px; border: 2px solid var(--ink); padding: 8px 24px; font-size: 22px; font-weight: 800; }
 .nstrip .ns.blankn { color: #bbb; background: #f3f0ff; }
 .cmp-dots .bignum { font-size: 22px; }
+
+/* 错题本：完整题目快照 */
+.wq-snap { border: 2px dashed #ddd; border-radius: 12px; padding: 8px 12px; margin: 6px 0; background: #fffdf8; }
+.wq-snap .stage.small { min-height: 0; padding: 4px; }
+.wq-snap .stage.small img, .wq-snap .stage.small .figimg { max-width: 320px !important; }
+.wq-snap .wq-prompt { font-weight: 700; margin-bottom: 4px; }
+.wq-snap .fill { font-size: 18px; line-height: 2.2; }
+.wq-snap .btn, .wq-snap .sub { display: none; }
+.wq-snap .choices { max-width: 520px; margin: 4px 0; } .wq-snap .choice { font-size: 17px; padding: 6px 10px; }
+.wq-snap .l1item { font-size: 28px; } .wq-snap .tf { grid-template-columns: repeat(5, 36px); grid-auto-rows: 36px; } .wq-snap .tf-ico { font-size: 22px; }
+.wrong-item.done { opacity: .85; }
+.done-card summary { cursor: pointer; list-style: none; } .done-card summary::-webkit-details-marker { display: none; }
+/* 条形图（应用题） */
+.bar2 { display: inline-flex; flex-direction: column; align-items: stretch; min-width: 260px; }
+.barrow { display: flex; border: 2px solid var(--ink); border-radius: 4px; overflow: hidden; }
+.barseg { padding: 6px 10px; text-align: center; font-weight: 800; background: #e9e4ff; } .barseg.alt { background: #ffe9c9; border-left: 2px solid var(--ink); }
+.barlab { text-align: center; font-weight: 800; margin-top: 2px; color: var(--accent); }

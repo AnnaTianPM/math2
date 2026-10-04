@@ -233,7 +233,7 @@
   /* column：竖式，每一位一个格子（含千位可选）  q = { id, type:'column', a, b, op } */
   window.QTypes.column = q => {
     const ans = q.op === '+' ? q.a + q.b : q.a - q.b;
-    const w = ans >= 1000 ? 4 : 3;
+    const w = q.width || (ans >= 1000 ? 4 : 3);
     const ansD = String(ans).padStart(w, '0').split('');
     // 前导 0 允许不填
     const lead = ansD.findIndex(d => d !== '0');
@@ -245,7 +245,7 @@
       const rowB = keys.map((k, i) => `<div class="col-cell ${k}">${i === 0 ? `<span class="op">${q.op === '-' ? '−' : '+'}</span>` : ''}<span class="dg">${db[i].trim()}</span></div>`).join('');
       const rowR = keys.map((k, i) => `<div class="col-cell res ${k}"><input class="col-in" data-i="${i}" maxlength="1" inputmode="numeric" autocomplete="off"></div>`).join('');
       return `<div class="center"><div class="column" style="grid-template-columns: repeat(${w}, 64px)">${head}${rowA}${rowB}${rowR}</div>
-        <div class="sub">从右往左填：先个位，再十位，再百位。上面小格可以写进位/借位（不算分）。</div>
+        <div class="sub">从右往左填：先个位，再十位${w > 2 ? '，再百位' : ''}。上面小格可以写进位/借位（不算分）。</div>
         <div class="center mt"><button class="btn ok" id="submit">检查 ✔</button></div></div>`;
     }
     function bind(box, submit) {
