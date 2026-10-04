@@ -693,3 +693,5 @@ input.carry-in:focus { border-color: var(--bad); }
 .l1pg .pg-row.right .pg-cells { background: #e5f9ec; } .l1pg .pg-row.wrong .pg-cells { background: #ffe1e1; }
 .l1pg .pg-sym.dice { font-size: 32px; }
 .l1pg .pg-lab .dice, .l1pg .pg-note .dice, .expand-line .dice { font-size: 30px; line-height: 1; vertical-align: middle; }
+.pic-item img { height: 64px; vertical-align: middle; }
+.l1wrap .pic-groups { margin: 6px 0 10px; }
