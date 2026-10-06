@@ -740,3 +740,4 @@ pre.ldiv .ldv { display: inline-block; width: 1ch; margin-right: 0; }
 pre.ldiv .lbr { display: inline-block; margin-right: 0; }
 pre.ldiv .lsub { text-decoration: underline; text-underline-offset: 6px; }
 pre.ldiv .lrem { color: var(--bad); font-weight: 800; }
+pre.ldiv.mcol { font-size: 22px; } pre.ldiv .mhl { background: #fff3d6; border-radius: 4px; padding: 0 2px; } pre.ldiv .mcarry { color: var(--bad); font-size: 14px; }
