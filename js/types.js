@@ -292,7 +292,7 @@ window.StepKinds = window.StepKinds || {};
       hint: { zh: '先比百位，百位一样再比十位，十位也一样就比个位。', en: 'Compare the hundreds first, then the tens, then the ones.' },
       answerText: sorted.join(', '),
       check: val => val === sorted.join(', '),
-      explainKind: 'arrange', n: { nums: q.nums, order: q.order },
+      explainKind: q.explain ? q.explain[0] : 'arrange', n: q.explain ? q.explain[1] : { nums: q.nums, order: q.order },
     };
   };
 

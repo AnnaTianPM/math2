@@ -13,7 +13,9 @@ const NumWords = (() => {
   }
   // 0-1000 的英文（英式：three hundred and twenty-one）
   function toWords(n) {
-    if (n === 1000) return 'one thousand';
+    if (n === 10000) return 'ten thousand';
+    if (n >= 1000) { const th = Math.floor(n / 1000), rest = n % 1000, h = Math.floor(rest / 100), r = rest % 100;
+      return `${ones[th]} thousand${h ? `, ${ones[h]} hundred` : ''}${r ? ` and ${under100(r)}` : ''}`; }
     if (n < 100) return under100(n);
     const h = Math.floor(n / 100), r = n % 100;
     return r ? `${ones[h]} hundred and ${under100(r)}` : `${ones[h]} hundred`;
@@ -26,6 +28,8 @@ const NumWords = (() => {
   }
   // 中文读法
   function toZh(n) {
+    if (n === 10000) return '一万';
+    if (n >= 1000) { const th = Math.floor(n / 1000), rest = n % 1000; if (!rest) return zh[th] + '千'; const r = toZh(rest); return zh[th] + '千' + (rest < 100 ? '零' + r.replace(/^一十/, '一十') : r); }
     if (n === 1000) return '一千';
     const h = Math.floor(n / 100), t = Math.floor(n / 10) % 10, o = n % 10;
     let s = '';
