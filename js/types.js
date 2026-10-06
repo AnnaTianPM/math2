@@ -249,9 +249,10 @@ window.StepKinds = window.StepKinds || {};
   window.QTypes.arrange = q => {
     const asc = q.order === 'asc';
     const sorted = q.nums.slice().sort((x, y) => asc ? x - y : y - x);
+    const show = n => q.fmt ? q.fmt(n) : n;
     function html() {
       return `<div class="arrange">
-        <div class="tiles" id="tiles">${q.nums.map((n, i) => `<button type="button" class="tile" data-i="${i}" data-val="${n}">${n}</button>`).join('')}</div>
+        <div class="tiles" id="tiles">${q.nums.map((n, i) => `<button type="button" class="tile" data-i="${i}" data-val="${n}">${show(n)}</button>`).join('')}</div>
         <div class="arrow-hint">👇 按顺序点数字（${asc ? '从小到大' : '从大到小'}）｜ Tap the numbers in order（${asc ? 'smallest first' : 'greatest first'}）</div>
         <div class="slots" id="slots">${q.nums.map(() => '<span class="slot"></span>').join('')}</div>
         <div class="center mt"><button class="btn secondary small" id="undo">撤销一个 ↩</button> <button class="btn ok" id="submit" disabled>检查 ✔</button></div></div>`;
@@ -259,7 +260,7 @@ window.StepKinds = window.StepKinds || {};
     let picked = [];
     function draw(box) {
       const slots = box.querySelectorAll('.slot');
-      slots.forEach((s, i) => { s.textContent = picked[i] !== undefined ? picked[i].val : ''; s.classList.toggle('filled', picked[i] !== undefined); });
+      slots.forEach((s, i) => { s.textContent = picked[i] !== undefined ? show(picked[i].val) : ''; s.classList.toggle('filled', picked[i] !== undefined); });
       box.querySelectorAll('.tile').forEach(t => t.classList.toggle('used', picked.some(p => p.i === +t.dataset.i)));
       const sub = box.querySelector('#submit'); if (sub) sub.disabled = picked.length !== q.nums.length;
     }
@@ -277,12 +278,12 @@ window.StepKinds = window.StepKinds || {};
       // 让孩子重来：清空
       setTimeout(() => { picked = []; draw(box); slots.forEach(s => s.classList.remove('right', 'wrong')); }, 1200);
     }
-    function showAnswer(box) { const slots = box.querySelectorAll('.slot'); slots.forEach((s, i) => { s.textContent = sorted[i]; s.classList.remove('wrong'); s.classList.add('filled', 'right'); }); lock(box); }
+    function showAnswer(box) { const slots = box.querySelectorAll('.slot'); slots.forEach((s, i) => { s.textContent = show(sorted[i]); s.classList.remove('wrong'); s.classList.add('filled', 'right'); }); lock(box); }
     function lock(box) { box.querySelectorAll('.tile, #undo, #submit').forEach(b => b.disabled = true); }
     function restore(box, val, status) {
       const vals = String(val || '').split(',').map(s => +s.trim()).filter(x => !isNaN(x));
       const slots = box.querySelectorAll('.slot');
-      slots.forEach((s, i) => { s.textContent = vals[i] !== undefined ? vals[i] : sorted[i]; s.classList.add('filled', vals[i] === sorted[i] || vals[i] === undefined ? 'right' : 'wrong'); });
+      slots.forEach((s, i) => { s.textContent = show(vals[i] !== undefined ? vals[i] : sorted[i]); s.classList.add('filled', vals[i] === sorted[i] || vals[i] === undefined ? 'right' : 'wrong'); });
       lock(box);
     }
     return {
@@ -290,7 +291,7 @@ window.StepKinds = window.StepKinds || {};
       stage: '',
       custom: { html, bind, value, markWrong, showAnswer, lock, restore },
       hint: { zh: '先比百位，百位一样再比十位，十位也一样就比个位。', en: 'Compare the hundreds first, then the tens, then the ones.' },
-      answerText: sorted.join(', '),
+      answerText: sorted.map(show).join(', '),
       check: val => val === sorted.join(', '),
       explainKind: q.explain ? q.explain[0] : 'arrange', n: q.explain ? q.explain[1] : { nums: q.nums, order: q.order },
     };
