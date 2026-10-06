@@ -11,12 +11,20 @@
 
   function answerOf(q) {
     const m = q.model;
+    if (m.kind === 'mul') return m.a * m.b;
+    if (m.kind === 'div') return m.total / m.by;
+    if (m.kind === 'times') return m.base.v * m.k;
+    if (m.kind === 'units') return m.total / (m.k + 1);
     if (m.kind === 'add') return m.parts.reduce((s, p) => s + p.v, 0);
     if (m.kind === 'sub') return m.whole.v - m.known.v;
     return m.otherIs === 'more' ? m.base.v + m.diff : m.base.v - m.diff;
   }
   function equationOf(q) {
     const m = q.model, ans = answerOf(q);
+    if (m.kind === 'mul') return { expr: `${m.a} × ${m.b}`, op: '×', ans };
+    if (m.kind === 'div') return { expr: `${m.total} ÷ ${m.by}`, op: '÷', ans };
+    if (m.kind === 'times') return { expr: `${m.base.v} × ${m.k}`, op: '×', ans };
+    if (m.kind === 'units') return { expr: `${m.total} ÷ ${m.k + 1}`, op: '÷', ans };
     if (m.kind === 'add') return { expr: m.parts.map(p => p.v).join(' + '), op: '+', ans };
     if (m.kind === 'sub') return { expr: `${m.whole.v} − ${m.known.v}`, op: '-', ans };
     return { expr: m.otherIs === 'more' ? `${m.base.v} + ${m.diff}` : `${m.base.v} − ${m.diff}`, op: m.otherIs === 'more' ? '+' : '-', ans };
@@ -162,10 +170,10 @@
         lock: box => { box.querySelector('#ans').disabled = true; box.querySelector('#submit').disabled = true; },
         restore: (box, val, status) => { const i = box.querySelector('#ans'); i.value = val || ''; i.classList.add(status === 'bad' ? 'badf' : 'good'); i.disabled = true; box.querySelector('#submit').disabled = true; const t = box.querySelector('#zhToggle'); if (t) t.onclick = () => { const z = box.querySelector('#zhText'); z.hidden = !z.hidden; }; },
       },
-      hint: { zh: q.model.kind === 'add' ? '“一共 / altogether / in all / in total”是把几部分合起来，用加法。' : q.model.kind === 'sub' ? '知道总数和其中一部分，求另一部分，用减法。' : (q.model.otherIs === 'more' ? '“比……多 more than”：求多的那个，用加法。' : '“比……少 fewer than”：求少的那个，用减法。'), en: `Try ${eq.expr}.` },
+      hint: q.hint || { zh: q.model.kind === 'add' ? '“一共 / altogether / in all / in total”是把几部分合起来，用加法。' : q.model.kind === 'sub' ? '知道总数和其中一部分，求另一部分，用减法。' : (q.model.otherIs === 'more' ? '“比……多 more than”：求多的那个，用加法。' : '“比……少 fewer than”：求少的那个，用减法。'), en: `Try ${eq.expr}.` },
       answerText: String(ans),
       check: v => parseInt(v, 10) === ans,
-      explainKind: 'word', n: q,
+      explainKind: q.explain ? q.explain[0] : 'word', n: q.explain ? q.explain[1] : q,
     };
   };
 })();

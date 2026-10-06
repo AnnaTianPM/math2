@@ -23,7 +23,7 @@
     const carries = cfg.carries || {}, regroup = cfg.regroup || {}, strike = cfg.strike || {};
     const head = keys.map(k => `<div class="col-head ${k}">${{ th: '千', h: 'H 百', t: 'T 十', o: 'O 个' }[k]}</div>`).join('');
     const rowA = keys.map((k, i) => `<div class="col-cell ${k} ${cfg.hl === k ? 'hl' : ''}"><span class="regroup">${regroup[k] !== undefined ? regroup[k] : (carries[k] !== undefined ? `<i class="carry">${carries[k]}</i>` : '')}</span><span class="dg ${strike[k] ? 'strike' : ''}">${da[i].trim()}</span></div>`).join('');
-    const rowB = keys.map((k, i) => `<div class="col-cell ${k} ${cfg.hl === k ? 'hl' : ''}">${i === 0 ? `<span class="op">${cfg.op === '-' ? '−' : '+'}</span>` : ''}<span class="dg">${db[i].trim()}</span></div>`).join('');
+    const rowB = keys.map((k, i) => `<div class="col-cell ${k} ${cfg.hl === k ? 'hl' : ''}">${i === 0 ? `<span class="op">${cfg.op === '-' ? '−' : cfg.op === '×' ? '×' : '+'}</span>` : ''}<span class="dg">${db[i].trim()}</span></div>`).join('');
     const rowR = keys.map((k, i) => `<div class="col-cell res ${k} ${cfg.hl === k ? 'hl' : ''}"><span class="dg">${res[i] === undefined ? '' : res[i]}</span></div>`).join('');
     return `<div class="column" style="grid-template-columns: repeat(${w}, 64px)">${head}${rowA}${rowB}${rowR}</div>`;
   }
@@ -232,7 +232,7 @@
 
   /* column：竖式，每一位一个格子（含千位可选）  q = { id, type:'column', a, b, op } */
   window.QTypes.column = q => {
-    const ans = q.op === '+' ? q.a + q.b : q.a - q.b;
+    const ans = q.op === '+' ? q.a + q.b : q.op === '×' ? q.a * q.b : q.a - q.b;
     const w = q.width || (ans >= 1000 ? 4 : 3);
     const ansD = String(ans).padStart(w, '0').split('');
     // 前导 0 允许不填
@@ -242,7 +242,7 @@
       const da = digits(q.a, w), db = digits(q.b, w);
       const head = keys.map(k => `<div class="col-head ${k}">${{ th: '千', h: 'H 百', t: 'T 十', o: 'O 个' }[k]}</div>`).join('');
       const rowA = keys.map((k, i) => `<div class="col-cell ${k}"><span class="regroup"><input class="carry-in" data-k="${k}" maxlength="2" placeholder="" title="进位/借位（可不填）"></span><span class="dg">${da[i].trim()}</span></div>`).join('');
-      const rowB = keys.map((k, i) => `<div class="col-cell ${k}">${i === 0 ? `<span class="op">${q.op === '-' ? '−' : '+'}</span>` : ''}<span class="dg">${db[i].trim()}</span></div>`).join('');
+      const rowB = keys.map((k, i) => `<div class="col-cell ${k}">${i === 0 ? `<span class="op">${q.op === '-' ? '−' : q.op === '×' ? '×' : '+'}</span>` : ''}<span class="dg">${db[i].trim()}</span></div>`).join('');
       const rowR = keys.map((k, i) => `<div class="col-cell res ${k}"><input class="col-in" data-i="${i}" maxlength="1" inputmode="numeric" autocomplete="off"></div>`).join('');
       return `<div class="center"><div class="column" style="grid-template-columns: repeat(${w}, 64px)">${head}${rowA}${rowB}${rowR}</div>
         <div class="sub">从右往左填：先个位，再十位${w > 2 ? '，再百位' : ''}。上面小格可以写进位/借位（不算分）。</div>
@@ -278,13 +278,13 @@
       lock(box);
     }
     return {
-      prompt: q.prompt || { zh: '列竖式算一算', en: 'Add' + (q.op === '-' ? '' : '') + ' these numbers' },
+      prompt: q.prompt || { zh: '列竖式算一算', en: q.op === '×' ? 'Multiply these numbers' : q.op === '-' ? 'Subtract these numbers' : 'Add these numbers' },
       stage: '',
       custom: { html, bind, value, markWrong, showAnswer, lock, restore },
-      hint: q.op === '+' ? { zh: '先加个位。满 10 就写个位数、向十位进 1。再加十位（别忘了进上来的 1），最后加百位。', en: 'Add the ones first. If 10 or more, write the ones digit and carry 1.' } : { zh: '先减个位。不够减就向十位借 1（十位减 1，个位加 10）。再减十位，最后减百位。', en: 'Subtract the ones first. If not enough, regroup 1 ten into 10 ones.' },
+      hint: q.hint || (q.op === '×' ? { zh: '从个位开始乘：个位 × 乘数，满 10 进位；再十位 × 乘数加上进的数；再百位。', en: 'Multiply the ones first, then the tens, then the hundreds. Regroup when needed.' } : q.op === '+' ? { zh: '先加个位。满 10 就写个位数、向十位进 1。再加十位（别忘了进上来的 1），最后加百位。', en: 'Add the ones first. If 10 or more, write the ones digit and carry 1.' } : { zh: '先减个位。不够减就向十位借 1（十位减 1，个位加 10）。再减十位，最后减百位。', en: 'Subtract the ones first. If not enough, regroup 1 ten into 10 ones.' }),
       answerText: String(ans),
       check: v => parseInt(v, 10) === ans,
-      explainKind: q.explain ? q.explain[0] : (q.op === '+' ? 'coladd' : 'colsub'), n: q.explain ? q.explain[1] : { a: q.a, b: q.b },
+      explainKind: q.explain ? q.explain[0] : (q.op === '+' ? 'coladd' : q.op === '×' ? 'l3mulcol' : 'colsub'), n: q.explain ? q.explain[1] : { a: q.a, b: q.b },
     };
   };
 
