@@ -9,8 +9,10 @@
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const PURPLE = '#6c5ce7', ORANGE = '#ff9f43', GREY = '#bbb';
 
+  const resolve1 = (m, a1) => JSON.parse(JSON.stringify(m), (k, v) => v === 'ANS1' ? a1 : v);
   function answerOf(q) {
     const m = q.model;
+    if (m.kind === 'chain') return answerOf({ model: resolve1(m.second, answerOf({ model: m.first })) });
     if (m.kind === 'mul') return m.a * m.b;
     if (m.kind === 'div') return m.total / m.by;
     if (m.kind === 'times') return m.base.v * m.k;
@@ -21,6 +23,7 @@
   }
   function equationOf(q) {
     const m = q.model, ans = answerOf(q);
+    if (m.kind === 'chain') return equationOf({ model: resolve1(m.second, answerOf({ model: m.first })) });
     if (m.kind === 'mul') return { expr: `${m.a} × ${m.b}`, op: '×', ans };
     if (m.kind === 'div') return { expr: `${m.total} ÷ ${m.by}`, op: '÷', ans };
     if (m.kind === 'times') return { expr: `${m.base.v} × ${m.k}`, op: '×', ans };
@@ -79,7 +82,17 @@
   }
 
   window.StepKinds.word = q => {
-    const m = q.model, ans = answerOf(q), eq = equationOf(q);
+    const m = q.model;
+    if (m.kind === 'chain') {
+      const a1 = answerOf({ model: m.first }), m2 = resolve1(m.second, a1);
+      const s1 = window.StepKinds.word(Object.assign({}, q, { model: m.first, sentence: m.sentence1 }));
+      const s2 = window.StepKinds.word(Object.assign({}, q, { model: m2 }));
+      s1[0] = { zh: `这道题要分<b>两步</b>算。第一步：${m.ask1.zh}`, en: `Two steps. Step 1: ${m.ask1.en}`, render: s1[0].render };
+      s2[0] = { zh: `第二步：${m.ask2.zh}（要用到第一步的答案 ${a1}）`, en: `Step 2: ${m.ask2.en}`, render: s2[0].render };
+      return s1.concat(s2);
+    }
+    if (['mul', 'div', 'times', 'units'].includes(m.kind)) return window.StepKinds.l3mdword(q);
+    const ans = answerOf(q), eq = equationOf(q);
     const nums = eq.expr.split(/ [+−] /).map(Number);
     const big4 = Math.max(ans, ...nums) >= 1000 && window.StepKinds.l3coladd;
     const colKind = eq.op === '+' ? (big4 ? 'l3coladd' : 'coladd') : (big4 ? 'l3colsub' : 'colsub');
