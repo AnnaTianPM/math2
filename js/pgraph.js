@@ -134,7 +134,7 @@
       box.querySelectorAll('.pgm').forEach(b => b.onclick = () => { if (box.dataset.locked) return; const i = +b.dataset.i; if (counts[i] > 0) counts[i]--; refresh(box); });
     }
     function bind(box, submit) {
-      counts = want.map(() => 0); refresh(box);
+      delete box.dataset.locked; counts = want.map(() => 0); refresh(box);
       box.querySelector('#clearAll').onclick = () => { if (box.dataset.locked) return; counts = want.map(() => 0); refresh(box); };
       box.querySelector('#submit').onclick = () => submit();
     }

@@ -142,6 +142,7 @@
       el.innerHTML = rep(spec.sym, counts[i]); el.classList.toggle('wide', spec.wide || counts[i] > 8);
     }
     function bind(box, submit) {
+      delete box.dataset.locked;
       const ins = [...box.querySelectorAll('.pg-in')];
       ins.forEach((inp, k) => {
         inp.oninput = () => { inp.value = inp.value.replace(/\D/g, '').slice(0, 2); counts[+inp.dataset.i] = inp.value === '' ? 0 : Math.min(20, +inp.value); paint(box, +inp.dataset.i); };

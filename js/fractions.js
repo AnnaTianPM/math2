@@ -171,7 +171,7 @@
       prompt: { zh: q.desc ? '从大到小排一排（先点最大的）' : '从小到大排一排（先点最小的）', en: q.desc ? 'Arrange, begin with the greatest' : 'Arrange, begin with the smallest' }, stage: '',
       custom: { html, bind, value, markWrong, showAnswer, lock, restore },
       hint: { zh: '分母一样就比分子，分子大的大；分子一样就比分母，分母大的反而小。', en: 'Same bottom: compare tops. Same top: bigger bottom is smaller.' },
-      answerText: answer, check: v => v === answer, explainKind: 'arrangef', n: { list: q.list, desc: q.desc },
+      answerText: answer, check: v => v === answer, explainKind: q.explain ? q.explain[0] : 'arrangef', n: q.explain ? q.explain[1] : { list: q.list, desc: q.desc },
     };
   };
 
