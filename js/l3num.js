@@ -124,7 +124,7 @@
       { zh: `要用 ${digits.join('、')} 组一个<b>${wantBig ? '最大' : '最小'}的${odd ? '奇数' : '偶数'}</b>。${odd ? '奇数' : '偶数'}看<b>个位</b>：个位必须是${odd ? '奇数（1、3、5、7、9）' : '偶数（0、2、4、6、8）'}。`, en: `${odd ? 'Odd' : 'Even'} numbers end in ${odd ? '1, 3, 5, 7, 9' : '0, 2, 4, 6, 8'}.`, render: s => { s.innerHTML = wrap(row()); } },
       { zh: `能放个位的有：${cand.join('、')}。要${wantBig ? '最大' : '最小'}，个位就用${wantBig ? '最小' : '最大'}的那个：<b>${onesD}</b>（把${wantBig ? '大' : '小'}的数字留给前面的高位）。`, en: `Ones digit: ${onesD}.`, render: s => { s.innerHTML = wrap(row(onesD), line(`_ _ _ ${onesD}`)); } },
       { zh: `剩下 ${rest.slice().sort((x, y) => x - y).join('、')}，${wantBig ? '从大到小' : '从小到大'}排在千位、百位、十位：${rest.join('、')}。`, en: `Arrange the rest ${wantBig ? 'from greatest' : 'from smallest'}.`, render: s => { s.innerHTML = wrap(row(null, [onesD]), line(`${rest.join(' ')} ${onesD}`)); } },
-      { zh: `答案：<b>${ans}</b>。`, en: `${ans}.`, render: s => { s.innerHTML = wrap(`<div class="center">${big(ans)}</div>`, line(`${ans}`)); } },
+      { zh: `答案：<b>${ans}</b>。`, en: `${ans}.`, render: s => { s.innerHTML = wrap(digits.length === 4 ? `<div class="center">${big(ans)}</div>` : '', line(`${ans}`)); } },
     ];
   };
   /* l3moreless：多/少 {start, delta} delta 可为 1/10/100/1000 的倍数 */

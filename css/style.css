@@ -732,3 +732,11 @@ input.carry-in:focus { border-color: var(--bad); }
 .digits-row { display: inline-flex; gap: 8px; } .digits-row span { width: 44px; height: 44px; border: 2px solid var(--primary); border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 800; background: #fff; }
 .digits-row span.used { opacity: .3; } .digits-row span.pick { background: #fff3d6; border-color: var(--accent); }
 .disc.x { position: relative; opacity: .55; } .disc.x::after { content: ''; position: absolute; inset: -2px; background: linear-gradient(45deg, transparent 46%, #7cb342 46%, #7cb342 54%, transparent 54%), linear-gradient(-45deg, transparent 46%, #7cb342 46%, #7cb342 54%, transparent 54%); }
+
+/* 短除式 */
+pre.ldiv { display: inline-block; font-family: 'Consolas', 'Menlo', monospace; font-size: 24px; line-height: 1.35; margin: 6px auto; padding: 8px 14px; background: #fff; border-radius: 8px; text-align: left; }
+pre.ldiv .lq { color: var(--primary); font-weight: 800; border-bottom: 2px solid var(--ink); display: inline-block; padding-left: 0; }
+pre.ldiv .ldv { display: inline-block; width: 1ch; margin-right: 0; }
+pre.ldiv .lbr { display: inline-block; margin-right: 0; }
+pre.ldiv .lsub { text-decoration: underline; text-underline-offset: 6px; }
+pre.ldiv .lrem { color: var(--bad); font-weight: 800; }
