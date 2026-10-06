@@ -12,8 +12,8 @@
 
   /* 圆片图（书上的 1000/100/10/1） o.hl: 高亮的位, o.on: {k: 已数的个数} */
   function discs(n, o = {}) {
-    const v = split(n), on = o.on || {};
-    return `<div class="discs">${K.map(k => `<div class="dcol ${o.hl === k ? 'hl' : ''}">${Array.from({ length: v[k] }, (_, i) => `<span class="disc d${VAL[k]} ${on[k] !== undefined && i < on[k] ? 'on' : ''}">${VAL[k]}</span>`).join('')}</div>`).join('')}</div>`;
+    const v = split(n), on = o.on || {}, cross = o.cross || {};
+    return `<div class="discs">${K.map(k => `<div class="dcol ${o.hl === k ? 'hl' : ''}">${Array.from({ length: v[k] }, (_, i) => `<span class="disc d${VAL[k]} ${on[k] !== undefined && i < on[k] ? 'on' : ''} ${cross[k] !== undefined && i >= v[k] - cross[k] ? 'x' : ''}">${VAL[k]}</span>`).join('')}</div>`).join('')}</div>`;
   }
   /* 数位表 */
   function pv(n, o = {}) {

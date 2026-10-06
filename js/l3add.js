@@ -55,6 +55,38 @@
       ...S.l3coladd({ a, b }).slice(1),
     ];
   };
+  /* l3discsub：圆片减法 {a, b}：划掉 */
+  S.l3discsub = ({ a, b }) => {
+    const diff = a - b, va = split(a), vb = split(b);
+    const crossed = (hl, upto) => { const idx = K.indexOf(upto === undefined ? 'th' : upto); return `<div class="center"><div class="disc-pair"><span class="lbl">${a}</span>${L3.discs(a, { hl, cross: Object.fromEntries(K.filter((k, i) => i <= idx).map(k => [k, vb[k]])) })}<span class="lbl">− ${b}</span>${L3.discs(b, { hl })}</div></div>`; };
+    const steps = [{ zh: `${a} 减 ${b}：在 ${a} 的圆片里<b>划掉</b> ${b} 的圆片：${vb.o} 个 1、${vb.t} 个 10、${vb.h} 个 100${vb.th ? `、${vb.th} 个 1000` : ''}。`, en: `Cross out ${b} from ${a}.`, render: s => { s.innerHTML = wrap(`<div class="center"><div class="disc-pair"><span class="lbl">${a}</span>${L3.discs(a)}<span class="lbl">− ${b}</span>${L3.discs(b)}</div></div>`); } }];
+    let borrowed = false;
+    K.forEach((k, i) => { const need = vb[k], have = va[k]; if (!need && !borrowed) { return; }
+      steps.push({ zh: `${NAME[k][0]}：要划掉 ${need} 个，有 ${have} 个${have < need ? `，<b>不够</b>！把 1 个${NAME[K[i + 1]][0]}换成 10 个${NAME[k][0]}再划` : ''}。剩下 ${split(diff)[k]} 个。`, en: `${NAME[k][1]}: cross out ${need}.${have < need ? ' Regroup first.' : ''}`, render: s => { s.innerHTML = wrap(crossed(k, k)); } }); if (have < need) borrowed = true; });
+    steps.push({ zh: `剩下的圆片是 <b>${diff}</b>。用竖式再算一遍：`, en: `${diff} left.`, render: s => { s.innerHTML = wrap(`<div class="center"><div class="disc-pair"><span class="lbl">= ${diff}</span>${L3.discs(diff)}</div></div>`); } });
+    return steps.concat(S.l3colsub({ a, b }).slice(1));
+  };
+  /* l3msub2：拆十拆一减 {a, b} */
+  S.l3msub2 = ({ a, b }) => {
+    const d = a - b, t = T(a) - T(b), o = O(a) - O(b);
+    const bonds = hl => `<div class="center"><div class="bond-groups">${window.L1.bond(a, T(a), O(a), { hl })}${window.L1.bond(b, T(b), O(b), { hl })}</div></div>`;
+    return [
+      { zh: `${a} − ${b}：把两个数都拆成<b>几十和几</b>：${a} = ${T(a)} + ${O(a)}，${b} = ${T(b)} + ${O(b)}。`, en: 'Split into tens and ones.', render: s => { s.innerHTML = wrap(bonds('w')); } },
+      { zh: `几十减几十：${T(a)} − ${T(b)} = <b>${t}</b>。`, en: `${T(a)} − ${T(b)} = ${t}.`, render: s => { s.innerHTML = wrap(bonds('a'), line(`${T(a)} − ${T(b)} = ${t}`)); } },
+      { zh: `几减几：${O(a)} − ${O(b)} = <b>${o}</b>。`, en: `${O(a)} − ${O(b)} = ${o}.`, render: s => { s.innerHTML = wrap(bonds('b'), line(`${T(a)} − ${T(b)} = ${t}`), line(`${O(a)} − ${O(b)} = ${o}`)); } },
+      { zh: `合起来：${t} + ${o} = <b>${d}</b>。所以 ${a} − ${b} = ${d}。`, en: `${t} + ${o} = ${d}.`, render: s => { s.innerHTML = wrap(line(`${t} + ${o} = ${d}`), line(`${a} − ${b} = ${d}`)); } },
+    ];
+  };
+  /* l3msub1：先减到整十 {a, b}：b 拆成 (b − O(a)) 和 O(a) */
+  S.l3msub1 = ({ a, b }) => {
+    const q = O(a), p = b - q, ten = a - p, d = a - b;
+    const bond = hl => `<div class="center">${window.L1.bond(b, p, q, { hl })}</div>`;
+    return [
+      { zh: `${a} − ${b}：${a} 的个位是 ${q}，先减掉一个个位也是 ${q} 的数就能得到整十。把 <b>${b}</b> 拆成 <b>${p}</b> 和 <b>${q}</b>。`, en: `Split ${b} into ${p} and ${q}.`, render: s => { s.innerHTML = wrap(bond('w'), line(`${a} − ${b} = ?`)); } },
+      { zh: `先减到整十：${a} − ${p} = <b>${ten}</b>。`, en: `${a} − ${p} = ${ten}.`, render: s => { s.innerHTML = wrap(bond('a'), line(`${a} − ${p} = ${ten}`)); } },
+      { zh: `再减剩下的：${ten} − ${q} = <b>${d}</b>。所以 ${a} − ${b} = ${d}。`, en: `${ten} − ${q} = ${d}.`, render: s => { s.innerHTML = wrap(bond('b'), line(`${a} − ${p} = ${ten}`), line(`${ten} − ${q} = ${d}`)); } },
+    ];
+  };
   /* l3mental2：拆十拆一 {a, b} 两位数 */
   S.l3mental2 = ({ a, b }) => {
     const sum = a + b, t = T(a) + T(b), o = O(a) + O(b);

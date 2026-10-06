@@ -72,8 +72,10 @@
 
   window.StepKinds.word = q => {
     const m = q.model, ans = answerOf(q), eq = equationOf(q);
-    const colKind = eq.op === '+' ? 'coladd' : 'colsub';
     const nums = eq.expr.split(/ [+−] /).map(Number);
+    const big4 = Math.max(ans, ...nums) >= 1000 && window.StepKinds.l3coladd;
+    const colKind = eq.op === '+' ? (big4 ? 'l3coladd' : 'coladd') : (big4 ? 'l3colsub' : 'colsub');
+    const addKind = big4 ? 'l3coladd' : 'coladd';
     const textBlock = `<div class="wp-text"><div class="wp-en">${esc(q.en)}</div><div class="wp-zh">${esc(q.zh)}</div></div>`;
     const sentence = (fill) => `<div class="expand-line">${esc(q.sentence.en).replace('___', `<b style="color:${ORANGE}">${fill}</b>`)}</div>`;
     const steps = [
@@ -98,8 +100,8 @@
       steps.push({ zh: `列竖式算：${eq.expr} = <b>${ans}</b>（想看每一步？做完题点“看讲解”里的竖式讲解）。`, en: `Work it out: ${eq.expr} = ${ans}.`, render: s => { last.render(s); s.innerHTML += `<div class="expand-line">${eq.expr} = ${ans}</div>`; } });
     } else {
       const mid = nums[0] + nums[1];
-      const s1 = window.StepKinds.coladd({ a: nums[0], b: nums[1] }); const l1 = s1[s1.length - 1];
-      const s2 = window.StepKinds.coladd({ a: mid, b: nums[2] }); const l2 = s2[s2.length - 1];
+      const s1 = window.StepKinds[addKind]({ a: nums[0], b: nums[1] }); const l1 = s1[s1.length - 1];
+      const s2 = window.StepKinds[addKind]({ a: mid, b: nums[2] }); const l2 = s2[s2.length - 1];
       steps.push({ zh: `先算前两个：${nums[0]} + ${nums[1]} = <b>${mid}</b>`, en: `First ${nums[0]} + ${nums[1]} = ${mid}.`, render: s => { l1.render(s); s.innerHTML += `<div class="expand-line">${nums[0]} + ${nums[1]} = ${mid}</div>`; } });
       steps.push({ zh: `再加第三个：${mid} + ${nums[2]} = <b>${ans}</b>`, en: `Then ${mid} + ${nums[2]} = ${ans}.`, render: s => { l2.render(s); s.innerHTML += `<div class="expand-line">${mid} + ${nums[2]} = ${ans}</div>`; } });
     }
@@ -115,7 +117,7 @@
     const m2 = JSON.parse(JSON.stringify(q.steps[1].model), (k, v) => v === 'ANS1' ? a1 : v);
     const a2 = answerOf({ model: m2 });
     const e1 = equationOf({ model: q.steps[0].model }), e2 = equationOf({ model: m2 });
-    const sent = (st, key) => esc(st.sentence.en).replace('___', `<input class="blank" data-key="${key}" type="text" inputmode="numeric" autocomplete="off" maxlength="4" style="width:4em">`);
+    const sent = (st, key) => esc(st.sentence.en).replace('___', `<input class="blank" data-key="${key}" type="text" inputmode="numeric" autocomplete="off" maxlength="5" style="width:4.5em">`);
     return {
       prompt: { zh: '两步应用题：先算 (a)，再用 (a) 的答案算 (b)', en: 'Two-step problem' },
       stage: `<div class="wp-text"><div class="wp-en">${esc(q.en)}</div><div class="wp-zh"><button class="speak small-speak" id="zhToggle" title="显示/隐藏中文">中</button><span id="zhText" hidden>${esc(q.zh)}</span></div>
@@ -144,7 +146,7 @@
 
   window.QTypes.word = q => {
     const ans = answerOf(q), eq = equationOf(q);
-    const sent = esc(q.sentence.en).replace('___', `<input class="blank" id="ans" data-key="a" type="text" inputmode="numeric" autocomplete="off" maxlength="4" style="width:4em">`);
+    const sent = esc(q.sentence.en).replace('___', `<input class="blank" id="ans" data-key="a" type="text" inputmode="numeric" autocomplete="off" maxlength="5" style="width:4.5em">`);
     return {
       prompt: { zh: '读题，算一算，把答案填进答句', en: 'Solve the word problem' },
       stage: `<div class="wp-text"><div class="wp-en">${esc(q.en)}</div><div class="wp-zh"><button class="speak small-speak" id="zhToggle" title="显示/隐藏中文">中</button><span id="zhText" hidden>${esc(q.zh)}</span></div></div>`,
