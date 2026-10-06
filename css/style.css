@@ -766,3 +766,6 @@ pre.mul2 .cr { color: var(--bad); font-size: 14px; display: block; line-height: 
 pre.mul2 .ln { display: block; border-top: 2px solid var(--ink); }
 pre.mul2 .hl { background: #fff3d6; border-radius: 4px; }
 pre.mul2 .ans { font-weight: 800; color: var(--primary); }
+.prot.live { cursor: crosshair; touch-action: none; }
+#pr.badf svg, #afig.badf svg { outline: 3px solid var(--bad); border-radius: 8px; }
+.prot text { user-select: none; }
