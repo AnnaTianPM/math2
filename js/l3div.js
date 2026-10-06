@@ -2,7 +2,7 @@
 (function () {
   const line = t => `<div class="expand-line">${t}</div>`;
   const wrap = (...parts) => `<div class="l1wrap">${parts.join('')}</div>`;
-  const NAME = ['个', '十', '百'], NAMEEN = ['ones', 'tens', 'hundreds'];
+  const NAME = ['个', '十', '百', '千'], NAMEEN = ['ones', 'tens', 'hundreds', 'thousands'];
   const S = window.StepKinds;
 
   /* 长除法各步：返回 [{qdigits, rows:[{text, indent}], note}] */

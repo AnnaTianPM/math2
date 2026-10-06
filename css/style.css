@@ -760,3 +760,9 @@ pre.ldiv.mcol { font-size: 22px; } pre.ldiv .mhl { background: #fff3d6; border-r
 .discrow { display: inline-flex; flex-wrap: wrap; gap: 6px; padding: 10px 14px; border: 2px solid var(--ink); border-radius: 6px; background: #fff; max-width: 620px; justify-content: center; }
 .l4sameq input.blank { width: 5.6em; }
 .nl-line { margin: 6px 0; }
+.col-head.tt, .col-cell.tt .dg { color: var(--tenth); } .col-head.th, .col-cell.th .dg { color: var(--thou); }
+pre.mul2 { display: inline-block; font-family: 'Consolas', 'Menlo', monospace; font-size: 26px; line-height: 1.4; margin: 6px auto; padding: 8px 18px; background: #fff; border-radius: 8px; text-align: right; }
+pre.mul2 .cr { color: var(--bad); font-size: 14px; display: block; line-height: 1; height: 14px; }
+pre.mul2 .ln { display: block; border-top: 2px solid var(--ink); }
+pre.mul2 .hl { background: #fff3d6; border-radius: 4px; }
+pre.mul2 .ans { font-weight: 800; color: var(--primary); }

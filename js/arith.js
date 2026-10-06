@@ -17,11 +17,11 @@
    */
   function columnHTML(cfg) {
     const w = cfg.width || 4;
-    const keys = ['th', 'h', 't', 'o'].slice(4 - w);
+    const keys = ['tt', 'th', 'h', 't', 'o'].slice(5 - w);
     const da = digits(cfg.a, w), db = digits(cfg.b, w);
     const res = cfg.result || Array(w).fill('');
     const carries = cfg.carries || {}, regroup = cfg.regroup || {}, strike = cfg.strike || {};
-    const head = keys.map(k => `<div class="col-head ${k}">${{ th: '千', h: 'H 百', t: 'T 十', o: 'O 个' }[k]}</div>`).join('');
+    const head = keys.map(k => `<div class="col-head ${k}">${{ tt: '万', th: '千', h: 'H 百', t: 'T 十', o: 'O 个' }[k]}</div>`).join('');
     const rowA = keys.map((k, i) => `<div class="col-cell ${k} ${cfg.hl === k ? 'hl' : ''}"><span class="regroup">${regroup[k] !== undefined ? regroup[k] : (carries[k] !== undefined ? `<i class="carry">${carries[k]}</i>` : '')}</span><span class="dg ${strike[k] ? 'strike' : ''}">${da[i].trim()}</span></div>`).join('');
     const rowB = keys.map((k, i) => `<div class="col-cell ${k} ${cfg.hl === k ? 'hl' : ''}">${i === 0 ? `<span class="op">${cfg.op === '-' ? '−' : cfg.op === '×' ? '×' : '+'}</span>` : ''}<span class="dg">${db[i].trim()}</span></div>`).join('');
     const rowR = keys.map((k, i) => `<div class="col-cell res ${k} ${cfg.hl === k ? 'hl' : ''}"><span class="dg">${res[i] === undefined ? '' : res[i]}</span></div>`).join('');
@@ -233,14 +233,14 @@
   /* column：竖式，每一位一个格子（含千位可选）  q = { id, type:'column', a, b, op } */
   window.QTypes.column = q => {
     const ans = q.op === '+' ? q.a + q.b : q.op === '×' ? q.a * q.b : q.a - q.b;
-    const w = q.width || (ans >= 1000 ? 4 : 3);
+    const w = q.width || (ans >= 10000 ? 5 : ans >= 1000 ? 4 : 3);
     const ansD = String(ans).padStart(w, '0').split('');
     // 前导 0 允许不填
     const lead = ansD.findIndex(d => d !== '0');
     function html() {
-      const keys = ['th', 'h', 't', 'o'].slice(4 - w);
+      const keys = ['tt', 'th', 'h', 't', 'o'].slice(5 - w);
       const da = digits(q.a, w), db = digits(q.b, w);
-      const head = keys.map(k => `<div class="col-head ${k}">${{ th: '千', h: 'H 百', t: 'T 十', o: 'O 个' }[k]}</div>`).join('');
+      const head = keys.map(k => `<div class="col-head ${k}">${{ tt: '万', th: '千', h: 'H 百', t: 'T 十', o: 'O 个' }[k]}</div>`).join('');
       const rowA = keys.map((k, i) => `<div class="col-cell ${k}"><span class="regroup"><input class="carry-in" data-k="${k}" maxlength="2" placeholder="" title="进位/借位（可不填）"></span><span class="dg">${da[i].trim()}</span></div>`).join('');
       const rowB = keys.map((k, i) => `<div class="col-cell ${k}">${i === 0 ? `<span class="op">${q.op === '-' ? '−' : q.op === '×' ? '×' : '+'}</span>` : ''}<span class="dg">${db[i].trim()}</span></div>`).join('');
       const rowR = keys.map((k, i) => `<div class="col-cell res ${k}"><input class="col-in" data-i="${i}" maxlength="1" inputmode="numeric" autocomplete="off"></div>`).join('');
