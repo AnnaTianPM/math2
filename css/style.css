@@ -747,3 +747,5 @@ pre.ldiv.mcol { font-size: 22px; } pre.ldiv .mhl { background: #fff3d6; border-r
 #pf.badf svg { outline: 3px dashed var(--bad); border-radius: 10px; }
 .polyfig .vtx.on { filter: drop-shadow(0 0 4px #ff9f43); }
 .choice .frac { font-size: 22px; }
+#gg.badf svg, [id^=ad].badf svg { outline: 3px dashed var(--bad); border-radius: 10px; }
+.geogrid, .cellfig { background: #fff; border-radius: 6px; }

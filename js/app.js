@@ -558,7 +558,7 @@
         box.querySelectorAll('.choice').forEach(b => b.onclick = () => submit(b.dataset.val));
         listen(e => { const k = parseInt(e.key, 10); if (state.phase === 'answer' && k >= 1 && k <= qv.choices.length && !$('.overlay')) { const b = box.querySelectorAll('.choice')[k - 1]; if (b && !b.disabled) b.click(); } });
       }
-      if (qv.custom) qv.custom.bind(box, () => submit(qv.custom.value(box)));
+      if (qv.custom) { delete box.dataset.locked; qv.custom.bind(box, () => submit(qv.custom.value(box))); }
     }
 
     // 已经做过：只读回看，可重做
