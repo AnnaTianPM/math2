@@ -92,5 +92,27 @@
     { zh: `${frac(n, d)} of ${total}："of" 就是<b>乘</b>：${frac(n, d)} × ${total}。先求 ${frac(1, d)}：把 ${total} 平均分成 ${d} 份，${total} ÷ ${d} = <b>${unit}</b>。`, en: `${total} ÷ ${d} = ${unit}.`, render: s => { s.innerHTML = wrap(`<div class="center">${L3.ubar([{ n: d, top: total, bottom: '?', bottomN: n }])}</div>`, line(`${total} ÷ ${d} = ${unit}`)); } },
     { zh: `要 ${n} 份：${unit} × ${n} = <b>${unit * n}</b>。所以 ${frac(n, d)} of ${total} = ${unit * n}。`, en: `${unit} × ${n} = ${unit * n}.`, render: s => { s.innerHTML = wrap(`<div class="center">${L3.ubar([{ n: d, top: total, bottom: unit * n, bottomN: n }])}</div>`, line(`${frac(n, d, true)} × ${total} = ${unit * n}`)); } },
   ]; };
-  window.L4FRAC = { mixed, showF, txtF, numline, toImp, gcd, lcm, WORD };
+
+  /* l4addsub：{terms:[[n,d]|[w,n,d]|[w,1]], ops:['+','-',...]} 结果化成最简（带分数） */
+  S.l4addsub = ({ terms, ops }) => {
+    const imps = terms.map(toImp), L = imps.reduce((m, f) => lcm(m, f[1]), 1), conv = imps.map(f => [f[0] * L / f[1], L]);
+    const signs = ['+'].concat(ops), sym = s => s === '-' ? '−' : '+';
+    const expr = (arr, fn) => arr.map((f, i) => `${i ? ` ${sym(signs[i])} ` : ''}${fn(f)}`).join('');
+    let acc = conv[0][0]; const run = [acc]; for (let i = 1; i < conv.length; i++) { acc = signs[i] === '-' ? acc - conv[i][0] : acc + conv[i][0]; run.push(acc); }
+    const g = gcd(acc, L) || 1, sn = acc / g, sd = L / g, w = Math.floor(sn / sd), r = sn % sd;
+    const finalHTML = sd === 1 ? `<b>${sn}</b>` : sn > sd ? mixed(w, r, sd, true) : frac(sn, sd, true);
+    const hasMixed = terms.some(t => t.length === 3 || t[1] === 1);
+    const steps = [];
+    if (hasMixed) steps.push({ zh: `先把整数和带分数都变成<b>假分数</b>：${terms.map((t, i) => t.length === 3 || t[1] === 1 ? `${showF(t)} = ${frac(imps[i][0], imps[i][1])}` : showF(t)).join('，')}${terms.some(t => t[1] === 1) ? `（整数 = 整数 × 分母 / 分母）` : ''}。`, en: 'Change whole and mixed numbers to improper fractions.', render: s => { s.innerHTML = wrap(line(expr(terms, t => showF(t, true))), line(expr(imps, f => frac(f[0], f[1], true)))); } });
+    steps.push({ zh: imps.every(f => f[1] === L) ? `分母都是 ${L}，可以直接算。` : `分母不一样，先变成<b>同分母 ${L}</b>：${imps.map((f, i) => f[1] === L ? `${frac(f[0], f[1])} 不变` : `${frac(f[0], f[1])} = ${frac(conv[i][0], L)}（× ${L / f[1]}）`).join('，')}。`, en: `Common denominator ${L}.`, render: s => { s.innerHTML = wrap(line(expr(imps, f => frac(f[0], f[1], true))), line(expr(conv, f => frac(f[0], f[1], true)))); } });
+    for (let i = 1; i < conv.length; i++) { const prev = run[i - 1], cur = run[i]; steps.push({ zh: `分母相同只算分子：${prev} ${sym(signs[i])} ${conv[i][0]} = <b>${cur}</b>，分母还是 ${L}。`, en: `${prev} ${signs[i]} ${conv[i][0]} = ${cur}.`, render: s => { s.innerHTML = wrap(line(expr(conv, f => frac(f[0], f[1], true))), line(`${prev} ${sym(signs[i])} ${conv[i][0]} = ${cur}`), line(frac(cur, L, true))); } }); }
+    const tail = [];
+    if (g > 1) tail.push(`分子分母都除以 ${g}：${frac(acc, L)} = ${frac(sn, sd)}`);
+    if (sn > sd && sd !== 1) tail.push(`${frac(sn, sd)} 是假分数，${sn} ÷ ${sd} = ${w} 余 ${r}，写成带分数 ${mixed(w, r, sd)}`);
+    if (sd === 1) tail.push(`正好是整数 ${sn}`);
+    steps.push({ zh: `得到 ${frac(acc, L)}。${tail.length ? tail.join('；') + '。' : '已经是最简。'}答案 <b>${sd === 1 ? sn : sn > sd ? `${w} ${r}/${sd}` : `${sn}/${sd}`}</b>。`, en: `${acc}/${L}${g > 1 ? ` = ${sn}/${sd}` : ''}${sn > sd && sd !== 1 ? ` = ${w} ${r}/${sd}` : ''}.`, render: s => { s.innerHTML = wrap(line(`${expr(terms, t => showF(t, true))} = ${frac(acc, L, true)}${g > 1 ? ' = ' + frac(sn, sd, true) : ''}${(sn > sd && sd !== 1) || sd === 1 ? ' = ' + finalHTML : ''}`)); } });
+    return steps;
+  };
+  const addsubAns = (terms, ops) => { const imps = terms.map(toImp), L = imps.reduce((m, f) => lcm(m, f[1]), 1); let acc = imps[0][0] * L / imps[0][1]; ops.forEach((o, i) => { const v = imps[i + 1][0] * L / imps[i + 1][1]; acc = o === '-' ? acc - v : acc + v; }); const g = gcd(acc, L) || 1, sn = acc / g, sd = L / g; return sd === 1 ? String(sn) : sn > sd ? `${Math.floor(sn / sd)} ${sn % sd}/${sd}` : `${sn}/${sd}`; };
+  window.L4FRAC = { mixed, showF, txtF, numline, toImp, gcd, lcm, WORD, addsubAns };
 })();
