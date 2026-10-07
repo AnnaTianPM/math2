@@ -153,6 +153,7 @@ window.StepKinds = window.StepKinds || {};
         if (f.kind === 'choice' && !isChoiceLong(f)) ctl = `<span class="seg" data-key="${k}">${f.options.map(o => `<button type="button" class="segbtn" data-val="${esc(o)}">${esc(o)}</button>`).join('')}</span>`;
         else if (f.kind === 'choice') ctl = `<span class="seg-placeholder" data-key="${k}">?</span>`;
         else if (f.kind === 'time') ctl = `<span class="timein" data-key="${k}"><input class="blank" data-key="${k}" data-part="h" type="text" inputmode="numeric" autocomplete="off" maxlength="2"><b>.</b><input class="blank" data-key="${k}" data-part="m" type="text" inputmode="numeric" autocomplete="off" maxlength="2"></span>`;
+        else if (f.kind === 'mixed') ctl = `<span class="mixin" data-key="${k}"><input class="blank mw" data-key="${k}" data-part="w" type="text" inputmode="numeric" autocomplete="off" maxlength="2"><span class="fracin"><input class="blank fn" data-key="${k}" data-part="n" type="text" inputmode="numeric" autocomplete="off" maxlength="2"><span class="fbar"></span><input class="blank fd" data-key="${k}" data-part="d" type="text" inputmode="numeric" autocomplete="off" maxlength="2"></span></span>`;
         else if (f.kind === 'frac') ctl = `<span class="fracin" data-key="${k}"><input class="blank fn" data-key="${k}" data-part="n" type="text" inputmode="numeric" autocomplete="off" maxlength="2"><span class="fbar"></span><input class="blank fd" data-key="${k}" data-part="d" type="text" inputmode="numeric" autocomplete="off" maxlength="2"></span>`;
         else ctl = `<input class="blank" data-key="${k}" type="text" inputmode="${f.kind === 'text' || f.kind === 'angname' ? 'text' : f.kind === 'money' ? 'decimal' : 'numeric'}" autocomplete="off" spellcheck="false" maxlength="${f.kind === 'text' ? 40 : f.kind === 'money' ? 8 : Math.max(String(f.a).length, 1)}" style="width:${f.kind === 'text' ? 12 : Math.max(String(f.a).length, 2) * 0.9 + 1.2}em">`;
         t = t.replace(`{{${k}}}`, ctl);
@@ -183,13 +184,14 @@ window.StepKinds = window.StepKinds || {};
         const f = q.fields[k];
         if (f.kind === 'choice') { const sel = box.querySelector(`[data-key="${k}"] .sel`); if (!sel) return null; v[k] = sel.dataset.val; }
         else if (f.kind === 'frac') { const ps = box.querySelectorAll(`input.blank[data-key="${k}"]`); if (!ps[0].value.trim() || !ps[1].value.trim()) return null; v[k] = ps[0].value.trim() + '/' + ps[1].value.trim(); }
+        else if (f.kind === 'mixed') { const ps = [...box.querySelectorAll(`input.blank[data-key="${k}"]`)].map(i => i.value.trim()); if (!ps[0] && !ps[1] && !ps[2]) return null; if ((ps[1] && !ps[2]) || (!ps[1] && ps[2])) return null; v[k] = (ps[0] || '0') + (ps[1] ? ' ' + ps[1] + '/' + ps[2] : ''); }
         else if (f.kind === 'time') { const ps = box.querySelectorAll(`input.blank[data-key="${k}"]`); if (!ps[0].value.trim() || !ps[1].value.trim()) return null; v[k] = ps[0].value.trim() + '.' + ps[1].value.trim(); }
         else { const inp = box.querySelector(`input.blank[data-key="${k}"]`); if (!inp.value.trim()) return null; v[k] = inp.value.trim(); }
       }
       return JSON.stringify(v);
     }
-    const norm = (k, s) => { const kind = q.fields[k].kind; if (kind === 'angname') { const t = String(s).toUpperCase().replace(/[^A-Z]/g, ''); return t.length === 3 && t[0] > t[2] ? t.split('').reverse().join('') : t; } if (kind === 'text') return String(s).toLowerCase().replace(/\s+/g, ' ').trim(); if (kind === 'money') { const f = parseFloat(String(s).replace(/[$,¢\s]/g, '')); return isNaN(f) ? String(s).trim() : f.toFixed(2); } if (kind === 'frac') return String(s).replace(/\s+/g, ''); if (kind === 'time') { const [h, m] = String(s).split('.'); return `${parseInt(h, 10)}.${String(parseInt(m || '0', 10)).padStart(2, '0')}`; } return String(s).trim(); };
-    const setFrac = (box, k, val) => { const ps = box.querySelectorAll(`input.blank[data-key="${k}"]`); const [n, d] = String(val === undefined ? '' : val).split(q.fields[k].kind === 'time' ? '.' : '/'); if (ps[0]) ps[0].value = n || ''; if (ps[1]) ps[1].value = d || ''; };
+    const norm = (k, s) => { const kind = q.fields[k].kind; if (kind === 'angname') { const t = String(s).toUpperCase().replace(/[^A-Z]/g, ''); return t.length === 3 && t[0] > t[2] ? t.split('').reverse().join('') : t; } if (kind === 'text') return String(s).toLowerCase().replace(/\s+/g, ' ').trim(); if (kind === 'money') { const f = parseFloat(String(s).replace(/[$,¢\s]/g, '')); return isNaN(f) ? String(s).trim() : f.toFixed(2); } if (kind === 'frac') return String(s).replace(/\s+/g, ''); if (kind === 'mixed') { const m = String(s).trim().match(/^(\d+)?\s*(?:(\d+)\s*\/\s*(\d+))?$/); if (!m) return String(s).trim(); const w = parseInt(m[1] || '0', 10), n = m[2] ? parseInt(m[2], 10) : 0, d = m[2] ? parseInt(m[3], 10) : 1; return n ? `${w}|${n}/${d}` : `${w}|0`; } if (kind === 'time') { const [h, m] = String(s).split('.'); return `${parseInt(h, 10)}.${String(parseInt(m || '0', 10)).padStart(2, '0')}`; } return String(s).trim(); };
+    const setFrac = (box, k, val) => { const ps = box.querySelectorAll(`input.blank[data-key="${k}"]`); if (q.fields[k].kind === 'mixed') { const m = String(val === undefined ? '' : val).trim().match(/^(\d+)?\s*(?:(\d+)\s*\/\s*(\d+))?$/) || []; if (ps[0]) ps[0].value = m[1] || ''; if (ps[1]) ps[1].value = m[2] || ''; if (ps[2]) ps[2].value = m[3] || ''; return; } const [n, d] = String(val === undefined ? '' : val).split(q.fields[k].kind === 'time' ? '.' : '/'); if (ps[0]) ps[0].value = n || ''; if (ps[1]) ps[1].value = d || ''; };
     // q.accept：多组可接受的答案 [{k:v,...}, ...]；判分时取匹配最多的一组
     const alts = q.accept ? q.accept : null;
     let target = null;
@@ -210,7 +212,7 @@ window.StepKinds = window.StepKinds || {};
     function showAnswer(box) {
       keys.forEach(k => {
         const inps = [...box.querySelectorAll(`input.blank[data-key="${k}"]`)];
-        if (q.fields[k].kind === 'frac' || q.fields[k].kind === 'time') setFrac(box, k, q.fields[k].a); else if (inps[0]) inps[0].value = q.fields[k].a;
+        if (q.fields[k].kind === 'frac' || q.fields[k].kind === 'time' || q.fields[k].kind === 'mixed') setFrac(box, k, q.fields[k].a); else if (inps[0]) inps[0].value = q.fields[k].a;
         inps.forEach(inp => { inp.classList.remove('badf'); inp.classList.add('good'); });
         const grp = box.querySelector(`.seg[data-key="${k}"], .small-choices[data-key="${k}"]`);
         if (grp) { grp.querySelectorAll('button').forEach(x => { if (norm(k, x.dataset.val) === norm(k, q.fields[k].a)) x.classList.add('right'); }); const ph = box.querySelector(`.seg-placeholder[data-key="${k}"]`); if (ph) ph.textContent = q.fields[k].a; }
@@ -223,7 +225,7 @@ window.StepKinds = window.StepKinds || {};
       pickTarget(v);
       keys.forEach(k => {
         const inps = [...box.querySelectorAll(`input.blank[data-key="${k}"]`)];
-        if (q.fields[k].kind === 'frac' || q.fields[k].kind === 'time') setFrac(box, k, v[k]); else if (inps[0]) inps[0].value = v[k] !== undefined ? v[k] : '';
+        if (q.fields[k].kind === 'frac' || q.fields[k].kind === 'time' || q.fields[k].kind === 'mixed') setFrac(box, k, v[k]); else if (inps[0]) inps[0].value = v[k] !== undefined ? v[k] : '';
         inps.forEach(inp => inp.classList.add(ok(k, v[k]) ? 'good' : 'badf'));
         const grp = box.querySelector(`.seg[data-key="${k}"], .small-choices[data-key="${k}"]`);
         if (grp) grp.querySelectorAll('button').forEach(x => { if (v[k] !== undefined && norm(k, x.dataset.val) === norm(k, v[k])) x.classList.add(ok(k, v[k]) ? 'right' : 'wrong'); if (norm(k, x.dataset.val) === norm(k, q.fields[k].a)) x.classList.add('right'); });

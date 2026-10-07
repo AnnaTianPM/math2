@@ -149,29 +149,30 @@
 
   /* ---------- 题型 arrangef：分数排序（点选） q = { id, type:'arrangef', list:[[n,d],...], desc:bool } */
   window.QTypes.arrangef = q => {
-    const val = f => f[0] / f[1];
+    const val = f => f.length === 3 ? f[0] + f[1] / f[2] : f[0] / f[1];
     const sorted = q.list.slice().sort((a, b) => q.desc ? val(b) - val(a) : val(a) - val(b));
-    const key = f => f[0] + '/' + f[1];
+    const key = f => f.join('/');
+    const show = f => f.length === 3 ? `<span class="mixed"><span class="w">${f[0]}</span>${frac(f[1], f[2])}</span>` : frac(f[0], f[1]);
     let picked = [];
     function html() {
-      return `<div class="arrange"><div class="tiles" id="tiles">${q.list.map((f, i) => `<button type="button" class="tile frac-tile" data-i="${i}" data-val="${key(f)}"><span>${f[0]}</span><span class="d">${f[1]}</span></button>`).join('')}</div>
+      return `<div class="arrange"><div class="tiles" id="tiles">${q.list.map((f, i) => (f.length === 3 ? `<button type="button" class="tile mix-tile" data-i="${i}" data-val="${key(f)}">${show(f)}</button>` : `<button type="button" class="tile frac-tile" data-i="${i}" data-val="${key(f)}"><span>${f[0]}</span><span class="d">${f[1]}</span></button>`)).join('')}</div>
         <div class="arrow-hint">👇 按顺序点（${q.desc ? '从大到小，先点最大的' : '从小到大，先点最小的'}）</div>
         <div class="slots" id="slots">${q.list.map(() => '<span class="slot"></span>').join('')}</div>
         <div class="center mt"><button class="btn secondary small" id="undo">撤销一个 ↩</button> <button class="btn ok" id="submit" disabled>检查 ✔</button></div></div>`;
     }
-    function draw(box) { const slots = box.querySelectorAll('.slot'); slots.forEach((s, i) => { s.innerHTML = picked[i] !== undefined ? frac(q.list[picked[i]][0], q.list[picked[i]][1]) : ''; s.classList.toggle('filled', picked[i] !== undefined); }); box.querySelectorAll('.tile').forEach(t => t.classList.toggle('used', picked.includes(+t.dataset.i))); const sub = box.querySelector('#submit'); if (sub) sub.disabled = picked.length !== q.list.length; }
+    function draw(box) { const slots = box.querySelectorAll('.slot'); slots.forEach((s, i) => { s.innerHTML = picked[i] !== undefined ? show(q.list[picked[i]]) : ''; s.classList.toggle('filled', picked[i] !== undefined); }); box.querySelectorAll('.tile').forEach(t => t.classList.toggle('used', picked.includes(+t.dataset.i))); const sub = box.querySelector('#submit'); if (sub) sub.disabled = picked.length !== q.list.length; }
     function bind(box, submit) { picked = []; box.querySelectorAll('.tile').forEach(t => t.onclick = () => { if (t.classList.contains('used') || t.disabled) return; picked.push(+t.dataset.i); draw(box); if (picked.length === q.list.length) setTimeout(submit, 250); }); box.querySelector('#undo').onclick = () => { picked.pop(); draw(box); }; box.querySelector('#submit').onclick = () => submit(); draw(box); }
     const value = () => picked.length === q.list.length ? picked.map(i => key(q.list[i])).join(', ') : null;
     const answer = sorted.map(key).join(', ');
     function markWrong(box) { const slots = box.querySelectorAll('.slot'); slots.forEach((s, i) => s.classList.add(picked[i] !== undefined && key(q.list[picked[i]]) === key(sorted[i]) ? 'right' : 'wrong')); setTimeout(() => { picked = []; draw(box); slots.forEach(s => s.classList.remove('right', 'wrong')); }, 1200); }
     function lock(box) { box.querySelectorAll('.tile, #undo, #submit').forEach(b => b.disabled = true); }
-    function showAnswer(box) { box.querySelectorAll('.slot').forEach((s, i) => { s.innerHTML = frac(sorted[i][0], sorted[i][1]); s.classList.remove('wrong'); s.classList.add('filled', 'right'); }); lock(box); }
-    function restore(box, val) { const vals = String(val || '').split(',').map(x => x.trim()); box.querySelectorAll('.slot').forEach((s, i) => { const v = vals[i] || key(sorted[i]); const [n, d] = v.split('/'); s.innerHTML = frac(n, d); s.classList.add('filled', v === key(sorted[i]) ? 'right' : 'wrong'); }); lock(box); }
+    function showAnswer(box) { box.querySelectorAll('.slot').forEach((s, i) => { s.innerHTML = show(sorted[i]); s.classList.remove('wrong'); s.classList.add('filled', 'right'); }); lock(box); }
+    function restore(box, val) { const vals = String(val || '').split(',').map(x => x.trim()); box.querySelectorAll('.slot').forEach((s, i) => { const v = vals[i] || key(sorted[i]); s.innerHTML = show(v.split('/').map(Number)); s.classList.add('filled', v === key(sorted[i]) ? 'right' : 'wrong'); }); lock(box); }
     return {
       prompt: { zh: q.desc ? '从大到小排一排（先点最大的）' : '从小到大排一排（先点最小的）', en: q.desc ? 'Arrange, begin with the greatest' : 'Arrange, begin with the smallest' }, stage: '',
       custom: { html, bind, value, markWrong, showAnswer, lock, restore },
       hint: { zh: '分母一样就比分子，分子大的大；分子一样就比分母，分母大的反而小。', en: 'Same bottom: compare tops. Same top: bigger bottom is smaller.' },
-      answerText: answer, check: v => v === answer, explainKind: q.explain ? q.explain[0] : 'arrangef', n: q.explain ? q.explain[1] : { list: q.list, desc: q.desc },
+      answerText: sorted.map(f => f.length === 3 ? `${f[0]} ${f[1]}/${f[2]}` : key(f)).join(', '), answerDisplay: v => String(v || '').split(',').map(x => { const p = x.trim().split('/'); return p.length === 3 ? `${p[0]} ${p[1]}/${p[2]}` : x.trim(); }).join(', '), check: v => v === answer, explainKind: q.explain ? q.explain[0] : 'arrangef', n: q.explain ? q.explain[1] : { list: q.list, desc: q.desc },
     };
   };
 

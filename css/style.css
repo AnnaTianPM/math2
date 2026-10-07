@@ -769,3 +769,10 @@ pre.mul2 .ans { font-weight: 800; color: var(--primary); }
 .prot.live { cursor: crosshair; touch-action: none; }
 #pr.badf svg, #afig.badf svg { outline: 3px solid var(--bad); border-radius: 8px; }
 .prot text { user-select: none; }
+.gridfig .gpt:hover { fill: rgba(108,92,231,.18); }
+.mixin { display: inline-flex; align-items: center; gap: 2px; vertical-align: middle; margin: 0 6px; }
+.mixin input.mw { width: 2.2em !important; font-size: 22px; text-align: center; }
+.mixed { display: inline-flex; align-items: center; gap: 2px; vertical-align: middle; font-weight: 800; }
+.mixed .w { font-size: 1.25em; }
+.tile.mix-tile .frac { font-size: .85em; } .tile.mix-tile .mixed .w { font-size: 1.1em; }
+.pick-opts .choice .mixed, .pick-opts .choice .frac { font-size: 26px; }
