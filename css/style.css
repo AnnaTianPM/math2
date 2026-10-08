@@ -781,3 +781,4 @@ pre.mul2 .ans { font-weight: 800; color: var(--primary); }
 .disc.d01 { width: 34px; } .disc.d001 { width: 42px; font-size: 11px; } .disc.d0001 { width: 50px; font-size: 10px; }
 .pv4.pvd th { font-size: 13px; padding: 4px 6px; min-width: 56px; } .pv4.pvd th.dot, .pv4.pvd td.dot { min-width: 10px; padding: 4px 2px; font-size: 24px; font-weight: 900; }
 .bignum .d.dot { color: var(--ink); }
+pre.mul2.dcol { text-align: right; font-size: 28px; }
