@@ -782,3 +782,4 @@ pre.mul2 .ans { font-weight: 800; color: var(--primary); }
 .pv4.pvd th { font-size: 13px; padding: 4px 6px; min-width: 56px; } .pv4.pvd th.dot, .pv4.pvd td.dot { min-width: 10px; padding: 4px 2px; font-size: 24px; font-weight: 900; }
 .bignum .d.dot { color: var(--ink); }
 pre.mul2.dcol { text-align: right; font-size: 28px; }
+.pv4.dtab th { font-size: 14px; } .pv4.dtab td.hl, .pv4.dtab th.hl { background: #fff3d6; }
