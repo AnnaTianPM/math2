@@ -776,3 +776,8 @@ pre.mul2 .ans { font-weight: 800; color: var(--primary); }
 .mixed .w { font-size: 1.25em; }
 .tile.mix-tile .frac { font-size: .85em; } .tile.mix-tile .mixed .w { font-size: 1.1em; }
 .pick-opts .choice .mixed, .pick-opts .choice .frac { font-size: 26px; }
+.ddiscs { display: inline-flex; flex-direction: column; gap: 6px; padding: 8px 12px; border: 2px solid var(--ink); border-radius: 6px; background: #fff; align-items: flex-start; max-width: 100%; }
+.ddiscs .drow { display: flex; flex-wrap: wrap; gap: 4px; padding: 2px 4px; border-radius: 6px; } .ddiscs .drow.hl { background: #fff3d6; }
+.disc.d01 { width: 34px; } .disc.d001 { width: 42px; font-size: 11px; } .disc.d0001 { width: 50px; font-size: 10px; }
+.pv4.pvd th { font-size: 13px; padding: 4px 6px; min-width: 56px; } .pv4.pvd th.dot, .pv4.pvd td.dot { min-width: 10px; padding: 4px 2px; font-size: 24px; font-weight: 900; }
+.bignum .d.dot { color: var(--ink); }
