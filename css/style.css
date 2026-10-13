@@ -787,3 +787,5 @@ pre.mul2.dcol { text-align: right; font-size: 28px; }
 .discs.seven { max-width: 100%; overflow-x: auto; }
 .disc.d100000 { width: 56px; font-size: 10px; } .disc.d1000000 { width: 64px; font-size: 10px; }
 .pv4.seven th { font-size: 12px; padding: 3px 5px; min-width: 52px; line-height: 1.1; } .pv4.seven th small { font-weight: 400; color: #666; font-size: 9px; } .pv4.seven td { font-size: 22px; }
+.canc { position: relative; display: inline-block; } .canc s { color: #999; } .canc i { position: absolute; font-style: normal; font-size: .55em; color: #d35400; left: 50%; transform: translateX(-50%); } .canc i.up { top: -.9em; } .canc i.dn { bottom: -1em; }
+.frac.big .canc { margin: .5em 0; }
