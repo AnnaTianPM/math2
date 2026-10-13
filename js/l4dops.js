@@ -55,7 +55,7 @@
   function dvHTML(aStr, b, st) {
     const ip = aStr.split('.')[0].length, digits = aStr.replace('.', ''), n = digits.length, pad = k => ' '.repeat(Math.max(0, k));
     const colOf = i => 3 + i + (i >= ip && aStr.includes('.') ? 1 : 0);
-    let qline = ''; if (st) { const first = n - st.q.length - (st.rows.length ? 0 : 0); const start = n - String(st.qFull || '').length; const arr = Array(colOf(n - 1) + 1).fill(' '); const off = st.qStart; st.q.split('').forEach((ch, j) => { arr[colOf(off + j) - 1] = ch; }); if (aStr.includes('.') && st.q.length > 0 && off + st.q.length > ip) arr[colOf(ip) - 2] = '.'; qline = arr.join('').replace(/\s+$/, ''); }
+    let qline = ''; if (st) { const first = n - st.q.length - (st.rows.length ? 0 : 0); const start = n - String(st.qFull || '').length; const arr = Array(colOf(n - 1) + 1).fill(' '); const off = st.qStart; st.q.split('').forEach((ch, j) => { arr[colOf(off + j) - 1] = ch; }); if (aStr.includes('.') && st.q.length > 0 && off + st.q.length > ip) { arr[colOf(ip) - 2] = '.'; if (off >= ip) arr[colOf(ip - 1) - 1] = '0'; } qline = arr.join('').replace(/\s+$/, ''); }
     let out = `<span class="lq">${qline.padEnd(colOf(n - 1), ' ')}</span>\n<span class="ldv">${b}</span><span class="lbr">)</span>${aStr}`;
     if (st) st.rows.forEach(r => { const end = colOf(r.indent); const txt = pad(end - r.text.length) + r.text; out += `\n${r.kind === 'sub' ? '<span class="lsub">' : ''}${r.kind === 'rem' && r.last ? '<span class="lrem">' : ''}${txt}${r.kind === 'sub' ? '</span>' : ''}${r.kind === 'rem' && r.last ? '</span>' : ''}`; });
     return `<pre class="ldiv">${out}</pre>`;
