@@ -12,12 +12,13 @@ const NumWords = (() => {
     return o ? `${tens[t]}-${ones[o]}` : tens[t];
   }
   // 0-1000 的英文（英式：three hundred and twenty-one）
+  const seg = n => { const h = Math.floor(n / 100), r = n % 100; return h ? `${ones[h]} hundred${r ? ' and ' + under100(r) : ''}` : under100(r); };
+  // 0-9 999 999 的英文（英式）：段与段之间用逗号，最后一段若不含 and 则用 and 连接
   function toWords(n) {
-    if (n >= 1000) { const th = Math.floor(n / 1000), rest = n % 1000, h = Math.floor(rest / 100), r = rest % 100;
-      return `${th >= 100 ? 'one hundred' : under100(th)} thousand${h ? (r ? `, ${ones[h]} hundred` : ` and ${ones[h]} hundred`) : ''}${r ? ` and ${under100(r)}` : ''}`; }
-    if (n < 100) return under100(n);
-    const h = Math.floor(n / 100), r = n % 100;
-    return r ? `${ones[h]} hundred and ${under100(r)}` : `${ones[h]} hundred`;
+    if (n < 1000) return seg(n);
+    const m = Math.floor(n / 1000000), t = Math.floor(n / 1000) % 1000, r = n % 1000, list = [];
+    if (m) list.push(`${seg(m)} million`); if (t) list.push(`${seg(t)} thousand`); if (r) list.push(seg(r));
+    return list.map((x, i) => i === 0 ? x : (i === list.length - 1 && !x.includes(' and ') ? ' and ' : ', ') + x).join('');
   }
   // 拆成三部分，用于分步讲解：{h:'three hundred', and:'and', t:'twenty', o:'one', rest:'twenty-one'}
   function parts(n) {
@@ -27,7 +28,7 @@ const NumWords = (() => {
   }
   // 中文读法
   function toZh(n) {
-    if (n >= 10000) { const w = Math.floor(n / 10000), rest = n % 10000; return (w === 10 ? '十' : zh[w]) + '万' + (rest ? (rest < 1000 ? '零' + toZh(rest) : toZh(rest)) : ''); }
+    if (n >= 10000) { const w = Math.floor(n / 10000), rest = n % 10000; const ws = w < 10 ? zh[w] : w === 10 ? '十' : w < 20 ? '十' + zh[w % 10] : toZh(w); return ws + '万' + (rest ? (rest < 1000 ? '零' + toZh(rest) : toZh(rest)) : ''); }
     if (n >= 1000) { const th = Math.floor(n / 1000), rest = n % 1000; if (!rest) return zh[th] + '千'; const r = toZh(rest); return zh[th] + '千' + (rest < 100 ? '零' + r.replace(/^一十/, '一十') : r); }
     if (n === 1000) return '一千';
     const h = Math.floor(n / 100), t = Math.floor(n / 10) % 10, o = n % 10;
@@ -55,6 +56,7 @@ const NumWords = (() => {
       else if (j >= 2) { cur += j * 10; seen = true; }
       else if (t === 'hundred') { cur = (cur || 1) * 100; }
       else if (t === 'thousand') { total += (cur || 1) * 1000; cur = 0; }
+      else if (t === 'million') { total += (cur || 1) * 1000000; cur = 0; }
       else return null;
     }
     return seen || total ? total + cur : null;

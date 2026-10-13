@@ -783,3 +783,7 @@ pre.mul2 .ans { font-weight: 800; color: var(--primary); }
 .bignum .d.dot { color: var(--ink); }
 pre.mul2.dcol { text-align: right; font-size: 28px; }
 .pv4.dtab th { font-size: 14px; } .pv4.dtab td.hl, .pv4.dtab th.hl { background: #fff3d6; }
+.discs.seven .dcol { grid-template-columns: repeat(2, auto); min-width: 56px; padding: 6px 4px; }
+.discs.seven { max-width: 100%; overflow-x: auto; }
+.disc.d100000 { width: 56px; font-size: 10px; } .disc.d1000000 { width: 64px; font-size: 10px; }
+.pv4.seven th { font-size: 12px; padding: 3px 5px; min-width: 52px; line-height: 1.1; } .pv4.seven th small { font-weight: 400; color: #666; font-size: 9px; } .pv4.seven td { font-size: 22px; }
